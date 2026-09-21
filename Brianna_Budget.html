@@ -1,0 +1,2737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Finance Command Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans p-6 min-h-screen">
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <!-- Header Controls -->
+        <header class="bg-white p-6 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border border-slate-200 border-t-4 border-t-sky-600">
+            <div>
+                <h1 class="text-2xl font-black text-slate-900 tracking-tight">✈️ Brianna's Flight Finance Command Center</h1>
+                <p class="text-sm text-slate-500 font-medium mt-1">Data Model Status: <span class="text-emerald-600 font-bold">Local Sync Active</span></p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <button id="btn-export-tony-ics" class="px-3 py-2 bg-sky-600 text-white text-xs font-bold rounded-lg hover:bg-sky-500 transition shadow-sm">📅 Brianna .ics</button>
+                <button id="btn-export-hh-ics" class="px-3 py-2 bg-purple-600 text-white text-xs font-bold rounded-lg hover:bg-purple-500 transition shadow-sm">🏠 Household .ics</button>
+                <button id="btn-export" class="px-3 py-2 bg-slate-800 text-white text-xs font-bold rounded-lg hover:bg-slate-700 transition shadow-sm">Export JSON</button>
+                <label class="px-3 py-2 bg-slate-200 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-300 transition cursor-pointer shadow-sm">
+                    Import JSON
+                    <input type="file" id="btn-import" class="hidden" accept=".json">
+                </label>
+                <button onclick="hardResetApp()" class="px-3 py-2 bg-red-50 text-red-600 hover:bg-red-100 text-xs font-bold rounded-lg transition border border-red-100">🧹 Reset</button>
+            </div>
+        </header>
+
+        <!-- Master View Controls Navigation -->
+        <nav class="bg-white p-1.5 rounded-xl shadow-sm flex flex-wrap gap-1 border border-slate-200">
+            <button onclick="switchView('dashboard')" id="tab-view-dashboard" class="flex-1 min-w-[120px] text-center py-2.5 text-sm font-bold rounded-lg transition">📊 Executive Overview</button>
+            <button onclick="switchView('sandbox')" id="tab-view-sandbox" class="flex-1 min-w-[120px] text-center py-2.5 text-sm font-bold rounded-lg transition text-sky-600 border border-sky-100 bg-sky-50">🗓️ Schedule Sandbox</button>
+            <button onclick="switchView('buckets')" id="tab-view-buckets" class="flex-1 min-w-[120px] text-center py-2.5 text-sm font-bold rounded-lg transition">🎛️ Allocation Buckets</button>
+            <button onclick="switchView('ledger')" id="tab-view-ledger" class="flex-1 min-w-[120px] text-center py-2.5 text-sm font-bold rounded-lg transition">📝 Monthly Ledger</button>
+            <button onclick="switchView('savings')" id="tab-view-savings" class="flex-1 min-w-[120px] text-center py-2.5 text-sm font-bold rounded-lg transition">📈 Asset Goals</button>
+            <button onclick="switchView('debts')" id="tab-view-debts" class="flex-1 min-w-[120px] text-center py-2.5 text-sm font-bold rounded-lg transition">📉 Debt Payoff</button>
+        </nav>
+
+        <!-- Dynamic Month Navigation Tabs -->
+        <nav id="month-navigation-bar" class="bg-white p-2 rounded-xl shadow-sm overflow-x-auto flex gap-1 border border-slate-200">
+            <div id="month-tabs-container" class="flex gap-1 min-w-max w-full justify-between"></div>
+        </nav>
+
+        <!-- Running Available Cash Real-Time Metric -->
+        <section class="bg-slate-900 text-white p-6 rounded-xl shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <span class="text-xs uppercase font-bold text-sky-400 tracking-wider">Available Checking Flow (<span class="target-month-name"></span>)</span>
+                <div class="flex items-baseline gap-2 mt-1">
+                    <span id="text-available-cash" class="text-3xl font-extrabold text-white">$0.00</span>
+                    <span class="text-[10px] text-slate-400 max-w-[200px] leading-tight">Net checking margin after bills, buckets, & debts. (Excludes Per Diem)</span>
+                </div>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row gap-4 sm:gap-8 text-xs border-t md:border-t-0 md:border-l border-slate-700 pt-4 md:pt-0 md:pl-8 w-full md:w-auto">
+                <div class="bg-slate-800/50 p-3 rounded-lg border border-slate-700 flex flex-col justify-center">
+                    <div class="text-slate-400 font-semibold mb-1">Dedicated Road Food / Per Diem</div>
+                    <div id="summary-perdiem-val" class="font-black text-amber-400 text-lg">$0.00</div>
+                </div>
+                <div class="flex flex-col justify-center gap-2 w-full lg:w-auto mt-4 sm:mt-0">
+                    <div class="flex justify-between gap-4">
+                        <span class="text-slate-400">Total Net Flight Pay</span>
+                        <span id="summary-income-val" class="font-bold text-emerald-400">$0.00</span>
+                    </div>
+                    <div class="flex justify-between gap-4 border-b border-slate-700 pb-1.5">
+                        <span class="text-slate-400">Est. Taxes & Union Dues (23%)</span>
+                        <span id="summary-deductions-val" class="font-bold text-slate-300">-$0.00</span>
+                    </div>
+                    <div class="flex justify-between gap-4 pt-0.5">
+                        <span class="text-slate-400">Total Outflows (Bills, Debt, Buckets)</span>
+                        <span id="summary-outflow-val" class="font-bold text-red-400">$0.00</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 0: SCHEDULE SANDBOX -->
+        <div id="view-section-sandbox" class="space-y-6 app-view-panel hidden">
+            <!-- Dynamic Budget Warning Banner -->
+            <div id="sandbox-warning-banner" class="hidden bg-red-100 border-l-4 border-red-600 p-4 rounded-r-lg shadow-sm">
+                <div class="flex items-center">
+                    <span class="text-2xl mr-3">⚠️</span>
+                    <div>
+                        <h3 class="text-red-800 font-bold text-sm">Budget Shortfall Warning</h3>
+                        <p id="sandbox-warning-text" class="text-red-700 text-xs mt-0.5">Your currently scheduled trips do not cover your monthly bills, minimum debt payments, and bucket targets.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Trip Entry Form -->
+                <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 lg:col-span-1 flex flex-col h-full">
+                    <div class="mb-4 border-b border-slate-100 pb-3">
+                        <h2 class="text-lg font-bold text-slate-900">Add Open Time / Trip</h2>
+                        <p class="text-xs text-slate-500">Itemize your trip layout to forecast exact payload.</p>
+                    </div>
+                    
+                    <form id="form-sandbox-trip" class="space-y-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Trip / Pairing Name</label>
+                            <input type="text" id="sandbox-trip-name" required class="w-full border-slate-300 rounded-md p-2 border text-sm focus:ring-2 focus:ring-sky-500" placeholder="e.g. 3-Day SEA Turn">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Start Day (1-31)</label>
+                                <input type="number" id="sandbox-trip-day" min="1" max="31" required class="w-full border-slate-300 rounded-md p-2 border text-sm focus:ring-2 focus:ring-sky-500" placeholder="12">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Multiplier (Base Only)</label>
+                                <select id="sandbox-trip-mult" class="w-full border-slate-300 rounded-md p-2 border text-sm font-semibold focus:ring-2 focus:ring-sky-500 bg-white">
+                                    <option value="1">1.0x (Reg)</option>
+                                    <option value="1.5">1.5x (Prem)</option>
+                                    <option value="2">2.0x (Crit)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-3">
+                            <div>
+                                <label class="block text-[11px] font-bold text-sky-700 uppercase mb-1">Base TFP (Flight Time)</label>
+                                <input type="number" id="sandbox-trip-base" min="0" step="0.1" required class="w-full bg-white border-slate-300 rounded-md p-1.5 border text-sm font-bold focus:ring-2 focus:ring-sky-500" placeholder="20.4">
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Boarding Pay</label>
+                                    <input type="number" id="sandbox-trip-boarding" min="0" step="0.1" class="w-full bg-white border-slate-300 rounded-md p-1.5 border text-xs focus:ring-2 focus:ring-sky-500" placeholder="3.5">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Sit Pay</label>
+                                    <input type="number" id="sandbox-trip-sit" min="0" step="0.1" class="w-full bg-white border-slate-300 rounded-md p-1.5 border text-xs focus:ring-2 focus:ring-sky-500" placeholder="1.0">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-amber-600 uppercase mb-1">TAFB (Use HH:MM or Decimals)</label>
+                            <input type="text" id="sandbox-trip-tafb" required class="w-full border-amber-200 bg-amber-50 rounded-md p-2 border text-sm focus:ring-2 focus:ring-amber-500" placeholder="e.g. 61:22">
+                        </div>
+                        <button type="submit" class="w-full bg-sky-600 text-white px-4 py-2.5 rounded-md hover:bg-sky-500 transition text-sm font-bold mt-2 shadow-sm">+ Add Trip to Schedule</button>
+                    </form>
+
+                    <div class="mt-6 pt-4 border-t border-slate-100">
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">5th of Month Advance Pay ($)</label>
+                        <input type="number" id="sandbox-advance" min="0" step="0.01" class="w-full border-slate-300 rounded-md p-2 border text-sm font-bold focus:ring-2 focus:ring-sky-500" placeholder="1500.00">
+                        <p class="text-[10px] text-slate-400 mt-1">Updates the 20th True-Up calculation automatically.</p>
+                    </div>
+                </section>
+
+                <!-- Trip Board -->
+                <section class="bg-slate-200/50 p-6 rounded-xl border border-slate-200 lg:col-span-2">
+                    <div class="flex justify-between items-center mb-4 border-b border-slate-300 pb-3">
+                        <div>
+                            <h2 class="text-xl font-black text-slate-800">Your Scheduled Month (<span class="target-month-name"></span>)</h2>
+                            <p class="text-xs text-slate-500 font-medium mt-0.5">Toggle "Drop" to simulate giving away a trip. Math updates instantly.</p>
+                        </div>
+                        <div class="text-right bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
+                            <div class="text-[10px] font-bold text-slate-400 uppercase">Est. 20th True-Up Check</div>
+                            <div id="sandbox-trueup-display" class="text-lg font-black text-emerald-600">$0.00</div>
+                        </div>
+                    </div>
+
+                    <div id="sandbox-trip-board" class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto pr-2 pb-4">
+                        <!-- Trips render here -->
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- VIEW 1: EXECUTIVE DASHBOARD SUMMARY -->
+        <div id="view-section-dashboard" class="space-y-6 app-view-panel hidden">
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Flight Schedule Overview (Read Only on Dashboard) -->
+                <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 lg:col-span-2 flex flex-col justify-center">
+                    <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
+                        <h2 class="text-xl font-bold text-slate-900">Monthly Payload Summary</h2>
+                        <button onclick="switchView('sandbox')" class="text-[10px] uppercase font-bold text-sky-600 bg-sky-50 px-3 py-1.5 rounded hover:bg-sky-100 transition border border-sky-100">⚙️ Edit in Sandbox</button>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+                        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 text-center">
+                            <div class="text-[11px] font-bold text-slate-500 uppercase mb-1">Scheduled TFP</div>
+                            <div id="dash-total-tfp" class="text-2xl font-black text-slate-800">0.0</div>
+                        </div>
+                        <div class="bg-emerald-50 p-4 rounded-lg border border-emerald-100 text-center">
+                            <div class="text-[11px] font-bold text-emerald-700 uppercase mb-1">Est. Gross Pay</div>
+                            <div id="dash-gross-pay" class="text-xl font-black text-emerald-800 mt-1">$0.00</div>
+                        </div>
+                        <div class="bg-sky-50 p-4 rounded-lg border border-sky-100 text-center">
+                            <div class="text-[11px] font-bold text-sky-700 uppercase mb-1">True-Up Check</div>
+                            <div id="dash-trueup-pay" class="text-xl font-black text-sky-800 mt-1">$0.00</div>
+                        </div>
+                        <div class="bg-amber-50 p-4 rounded-lg border border-amber-100 text-center">
+                            <div class="text-[11px] font-bold text-amber-700 uppercase mb-1">Per Diem TAFB</div>
+                            <div id="dash-total-tafb" class="text-2xl font-black text-amber-800">0</div>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="flex flex-col gap-6 lg:col-span-1">
+                    <!-- TFP Target Engine -->
+                    <section class="bg-sky-900 text-white p-6 rounded-xl shadow-md flex flex-col justify-center relative overflow-hidden flex-1">
+                        <div class="absolute top-0 right-0 p-4 opacity-10 text-6xl">🎯</div>
+                        <h3 class="text-xs font-bold text-sky-300 uppercase tracking-wider mb-4">Target TFP Engine</h3>
+                        <p class="text-[11px] text-sky-100 mb-6 leading-relaxed">To cover all fixed bills, debt minimums, and savings buckets this month, you need to fly:</p>
+                        
+                        <div class="text-center bg-slate-900/40 border border-sky-700 rounded-xl p-4 mb-3 z-10">
+                            <div id="target-tfp-reg" class="text-4xl font-black text-white">0</div>
+                            <div class="text-xs font-semibold text-sky-200 mt-1">Regular (1.0x) TFP</div>
+                        </div>
+                        <div class="text-center text-xs text-sky-300 font-medium z-10">
+                            or <span id="target-tfp-prem" class="text-white font-bold">0</span> Premium (1.5x) TFP
+                        </div>
+                    </section>
+
+                    <!-- Should I Pick Up This Trip? Estimator -->
+                    <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="text-[13px] font-bold text-slate-900 mb-2">Trip Pick-Up Estimator</h3>
+                        <div class="grid grid-cols-3 gap-2 mb-2">
+                            <input type="number" id="est-base" placeholder="Base TFP" step="0.1" class="w-full border-slate-300 rounded-md p-1.5 text-[11px] font-bold focus:ring-2 focus:ring-sky-500 bg-slate-50 border">
+                            <input type="number" id="est-boarding" placeholder="Boarding" step="0.1" class="w-full border-slate-300 rounded-md p-1.5 text-[11px] focus:ring-2 focus:ring-sky-500 bg-slate-50 border">
+                            <input type="number" id="est-sit" placeholder="Sit Pay" step="0.1" class="w-full border-slate-300 rounded-md p-1.5 text-[11px] focus:ring-2 focus:ring-sky-500 bg-slate-50 border">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 mb-3">
+                            <select id="est-mult" class="w-full border-slate-300 rounded-md p-1.5 text-[11px] focus:ring-2 focus:ring-sky-500 bg-slate-50 border font-semibold">
+                                <option value="1">1.0x (Reg)</option>
+                                <option value="1.5">1.5x (Prem)</option>
+                                <option value="2">2.0x (Crit)</option>
+                            </select>
+                            <input type="text" id="est-tafb" placeholder="TAFB (HH:MM)" class="w-full border-slate-300 rounded-md p-1.5 text-[11px] focus:ring-2 focus:ring-sky-500 bg-slate-50 border">
+                        </div>
+                        <div class="bg-slate-800 rounded-lg p-3 text-center">
+                            <div class="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">Net Cash In Pocket</div>
+                            <div id="est-result-net" class="text-2xl font-black text-emerald-400">$0.00</div>
+                            <div id="est-result-breakdown" class="text-[9px] text-slate-400 mt-1">Gross: $0.00 | Tax: -$0.00 | Per Diem: $0.00</div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- Charts Section: Cash Flow & Net Worth -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h2 class="text-xl font-bold text-slate-900 mb-4">12-Month Projected Cash Flow</h2>
+                    <div class="relative h-64 w-full">
+                        <canvas id="chart-cashflow"></canvas>
+                    </div>
+                </section>
+                <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold text-slate-900">Total Net Worth Trajectory</h2>
+                        <span id="text-networth-val" class="text-lg font-black text-emerald-600">$0.00</span>
+                    </div>
+                    <div class="relative h-64 w-full">
+                        <canvas id="chart-networth"></canvas>
+                    </div>
+                </section>
+            </div>
+
+            <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
+                <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                    <h2 class="text-xl font-bold text-slate-900">Monthly Event Reference Calendar (<span class="target-month-name font-semibold text-sky-600"></span>)</h2>
+                    <div class="flex flex-wrap gap-4 text-xs font-medium">
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span> Paycheck</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-sky-500 inline-block"></span> Full Bill</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-purple-500 inline-block"></span> Split Bill</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span> Debt Due</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span> Trip</span>
+                    </div>
+                </div>
+                <div class="grid grid-cols-7 gap-1 text-center font-bold text-xs text-slate-400 py-1">
+                    <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                </div>
+                <div id="calendar-grid-container" class="grid grid-cols-7 gap-2"></div>
+            </section>
+        </div>
+
+        <!-- VIEW 2: ALLOCATION BUCKETS -->
+        <div id="view-section-buckets" class="bg-white p-6 rounded-xl shadow-sm space-y-4 app-view-panel hidden border border-slate-200">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900">Distribution Infrastructure</h2>
+                    <p class="text-sm text-slate-500 mt-1">Adjust target percentages based on net flight pay. (Per Diem is automatically excluded from percentages).</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-sm font-semibold">
+                        <span class="text-slate-500">Allocated: <span id="text-allocated" class="text-slate-900 font-bold">0%</span></span>
+                        <span class="mx-2 text-slate-300">|</span>
+                        <span class="text-slate-500">Unallocated: <span id="text-unallocated" class="text-emerald-600 font-bold">100%</span></span>
+                    </div>
+                    <button id="btn-add-bucket" class="bg-sky-600 hover:bg-sky-500 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition">+ Add Custom Bucket</button>
+                </div>
+            </div>
+            <div id="buckets-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        </div>
+
+        <!-- VIEW 3: LEDGER ACTIVITY MODULATOR -->
+        <div id="view-section-ledger" class="space-y-6 app-view-panel hidden">
+            <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col">
+                <h2 class="text-lg font-bold text-slate-800 mb-1">Additional Non-Flight Inflows (<span class="target-month-name font-medium text-sky-600"></span>)</h2>
+                <p class="text-xs text-slate-500 mb-4">Record item sales, gifts, or outside side-hustles received this month.</p>
+                
+                <form id="form-inflow" class="flex flex-col sm:flex-row gap-2 mb-4">
+                    <input type="text" id="inflow-desc" placeholder="Source (e.g. Sold Mower)" required class="flex-1 border-slate-300 rounded-md p-2 border text-sm focus:ring-2 focus:ring-emerald-500">
+                    <input type="number" id="inflow-amount" placeholder="Amount ($)" step="0.01" required class="w-28 border-slate-300 rounded-md p-2 border text-sm focus:ring-2 focus:ring-emerald-500">
+                    <input type="number" id="inflow-day" placeholder="Day (1-31)" min="1" max="31" required class="w-24 border-slate-300 rounded-md p-2 border text-sm focus:ring-2 focus:ring-emerald-500">
+                    <button type="submit" class="bg-emerald-600 text-white px-4 py-2 rounded-md hover:bg-emerald-500 transition text-sm font-semibold">+ Add Income</button>
+                </form>
+
+                <div class="overflow-auto border rounded-lg border-slate-100 max-h-48">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50 text-slate-600 sticky top-0 shadow-sm z-10">
+                            <tr>
+                                <th class="p-3 font-semibold">Source / Description</th>
+                                <th class="p-3 font-semibold text-center">Received Day</th>
+                                <th class="p-3 font-semibold text-right">Amount</th>
+                                <th class="p-3 font-semibold text-center w-12"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="list-inflows" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Discretionary Expenses & Bucket Transfers Module -->
+                <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col h-[560px]">
+                    <div class="flex justify-between items-center mb-1">
+                        <h2 class="text-lg font-bold text-slate-800">Discretionary Spending & Extra Payments (<span class="target-month-name font-medium text-sky-600"></span>)</h2>
+                    </div>
+                    <p class="text-xs text-slate-500 mb-3">Log daily spending or record a bucket funding transfer / extra debt payment.</p>
+                    
+                    <form id="form-expense" class="grid grid-cols-1 sm:grid-cols-12 gap-2 mb-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <input type="text" id="exp-desc" placeholder="Description (e.g. Extra Payment)" required class="sm:col-span-12 lg:col-span-4 border-slate-300 rounded-md p-2 border text-sm focus:ring-2 focus:ring-sky-500">
+                        <select id="exp-bucket" required class="sm:col-span-6 lg:col-span-3 border-slate-300 rounded-md p-2 border text-sm focus:ring-2 focus:ring-sky-500 bg-white truncate"></select>
+                        <select id="exp-type" required class="sm:col-span-6 lg:col-span-2 border-slate-300 rounded-md p-2 border text-sm focus:ring-2 focus:ring-sky-500 bg-white">
+                            <option value="expense">Outflow (Spent)</option>
+                            <option value="transfer">Fund Transfer (50/50)</option>
+                        </select>
+                        <input type="number" id="exp-amount" placeholder="Amount" step="0.01" required class="sm:col-span-8 lg:col-span-2 border-slate-300 rounded-md p-2 border text-sm focus:ring-2 focus:ring-sky-500">
+                        <button type="submit" class="sm:col-span-4 lg:col-span-1 bg-sky-600 text-white px-3 py-2 rounded-md hover:bg-sky-500 transition text-sm font-semibold shrink-0">Log</button>
+                    </form>
+
+                    <div id="quick-split-bar" class="flex flex-wrap gap-1.5 mb-3 bg-slate-50 p-2 rounded-lg border border-slate-200 text-xs max-h-24 overflow-y-auto"></div>
+
+                    <div class="flex-1 overflow-auto border rounded-lg border-slate-100">
+                        <table class="w-full text-left text-sm min-w-[500px]">
+                            <thead class="bg-slate-50 text-slate-600 sticky top-0 shadow-sm z-10">
+                                <tr>
+                                    <th class="p-3 font-semibold">Description</th>
+                                    <th class="p-3 font-semibold">Category / Target</th>
+                                    <th class="p-3 font-semibold text-center">Type</th>
+                                    <th class="p-3 font-semibold text-right">Amount</th>
+                                    <th class="p-3 font-semibold text-center w-12"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="list-expenses" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col h-[560px]">
+                    <h2 class="text-lg font-bold text-slate-800 mb-2">Recurring System Bills (<span class="target-month-name font-medium text-sky-600"></span>)</h2>
+                    
+                    <form id="form-bill" class="space-y-3 mb-4 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <div class="flex flex-col sm:flex-row items-center gap-2">
+                            <input type="text" id="bill-name" placeholder="Bill Name (e.g. Mortgage)" required class="flex-1 border-slate-300 rounded-md p-2 border text-sm focus:ring-2 focus:ring-sky-500">
+                            <input type="number" id="bill-amount" placeholder="Total Amt ($)" step="0.01" required class="w-28 border-slate-300 rounded-md p-2 border text-sm focus:ring-2 focus:ring-sky-500">
+                            <input type="number" id="bill-day" placeholder="Due Day" min="1" max="31" required class="w-24 border-slate-300 rounded-md p-2 border text-sm focus:ring-2 focus:ring-sky-500">
+                        </div>
+                        
+                        <div class="flex flex-col sm:flex-row items-center justify-between gap-2 border-t border-slate-200 pt-2">
+                            <div class="flex items-center gap-4">
+                                <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+                                    <input type="checkbox" id="bill-split" class="rounded border-slate-300 text-sky-600 focus:ring-sky-500">
+                                    Split 5th & 20th Pulls
+                                </label>
+                                <select id="bill-category" class="border-slate-300 rounded p-1 text-xs border bg-white font-medium text-slate-700">
+                                    <option value="tony" selected>👤 Brianna's Bill</option>
+                                    <option value="household">🏠 Household Bill</option>
+                                </select>
+                            </div>
+                            
+                            <div id="split-days-container" class="hidden flex items-center gap-2">
+                                <span class="text-xs text-slate-500 font-medium">Days:</span>
+                                <input type="number" id="bill-pull-1" value="5" min="1" max="31" class="w-14 border-slate-300 rounded-md p-1 border text-xs text-center focus:ring-2 focus:ring-sky-500">
+                                <span class="text-xs text-slate-400">&</span>
+                                <input type="number" id="bill-pull-2" value="20" min="1" max="31" class="w-14 border-slate-300 rounded-md p-1 border text-xs text-center focus:ring-2 focus:ring-sky-500">
+                            </div>
+
+                            <button type="submit" class="bg-sky-600 text-white px-4 py-1.5 rounded-md hover:bg-sky-500 transition text-xs font-semibold self-end sm:self-auto">+ Add Bill</button>
+                        </div>
+                    </form>
+
+                    <div class="flex-1 overflow-x-hidden border rounded-lg border-slate-100">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-50 text-slate-600 sticky top-0 shadow-sm z-10">
+                                <tr>
+                                    <th class="p-3 font-semibold">Bill Name</th>
+                                    <th class="p-3 font-semibold text-center">Category</th>
+                                    <th class="p-3 font-semibold text-center">Schedule</th>
+                                    <th class="p-3 font-semibold text-center">Status</th>
+                                    <th class="p-3 font-semibold text-center">Covered?</th>
+                                    <th class="p-3 font-semibold text-right">Amount</th>
+                                    <th class="p-3 font-semibold text-center w-32">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="list-bills" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- VIEW 4: SAVINGS PROJECTIONS & ASSET GOALS -->
+        <div id="view-section-savings" class="space-y-6 app-view-panel hidden">
+            
+            <section class="bg-slate-900 text-white p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">📈</span>
+                    <div>
+                        <h3 class="text-sm font-bold text-white">Universal Stock & Mutual Fund Quote Engine</h3>
+                        <p class="text-xs text-slate-400">Auto-syncs live NAV prices for Fidelity Mutual Funds and Stocks/ETFs (VOO, SCHD).</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <input type="password" id="input-finnhub-key" placeholder="Optional Finnhub Key..." class="bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white placeholder-slate-500 focus:ring-2 focus:ring-sky-500 focus:outline-none flex-1 sm:w-64">
+                    <button id="btn-sync-prices" class="bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition shrink-0">🔄 Refresh Prices</button>
+                </div>
+            </section>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <span class="text-xs font-bold text-slate-400 uppercase">Total Liquid Assets</span>
+                    <div id="text-total-savings" class="text-2xl font-extrabold text-slate-900 mt-1">$0.00</div>
+                </div>
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <span class="text-xs font-bold text-slate-400 uppercase">12-Month Projected Value</span>
+                    <div id="text-projected-savings" class="text-2xl font-extrabold text-sky-600 mt-1">$0.00</div>
+                </div>
+                <div class="bg-emerald-50 p-5 rounded-xl border border-emerald-100">
+                    <span class="text-xs font-bold text-emerald-700 uppercase">Emergency Runway</span>
+                    <div id="text-runway-months" class="text-2xl font-extrabold text-emerald-800 mt-1">0.0 Months</div>
+                    <p class="text-[11px] text-emerald-600 mt-0.5">Fixed bills coverage if flight hours drop to 0</p>
+                </div>
+            </div>
+
+            <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h2 class="text-xl font-bold text-slate-900 mb-4">12-Month Asset Growth Trajectory</h2>
+                <div class="relative h-64 w-full">
+                    <canvas id="chart-savings"></canvas>
+                </div>
+            </section>
+
+            <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
+                <form id="form-savings" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <input type="text" id="save-name" placeholder="Account Name (e.g. Fidelity Brokerage)" required class="lg:col-span-2 border-slate-300 rounded-md p-2 border text-sm focus:ring-2 focus:ring-sky-500">
+                    
+                    <select id="save-bucket" class="border-slate-300 rounded-md p-2 border text-sm focus:ring-2 focus:ring-sky-500 bg-white">
+                        <option value="none" selected>None (Pre-Tax / Standalone Investment)</option>
+                    </select>
+
+                    <select id="save-mode" required class="border-slate-300 rounded-md p-2 border text-sm focus:ring-2 focus:ring-sky-500 bg-white" onchange="toggleAssetModeUI(this.value)">
+                        <option value="manual" selected>Manual Balance</option>
+                        <option value="autosync">Auto-Sync Ticker</option>
+                    </select>
+
+                    <input type="number" id="save-balance" placeholder="Current Balance ($)" step="0.01" class="border-slate-300 rounded-md p-2 border text-sm focus:ring-2 focus:ring-sky-500">
+                    
+                    <input type="text" id="save-ticker" placeholder="Ticker (e.g. FXAIX)" class="hidden border-slate-300 rounded-md p-2 border text-sm focus:ring-2 focus:ring-sky-500 uppercase">
+                    <input type="number" id="save-shares" placeholder="Shares Owned" step="0.0001" class="hidden border-slate-300 rounded-md p-2 border text-sm focus:ring-2 focus:ring-sky-500">
+                    <input type="number" id="save-costbasis" placeholder="Cost Basis / Share ($)" step="0.01" class="hidden border-slate-300 rounded-md p-2 border text-sm focus:ring-2 focus:ring-sky-500">
+
+                    <input type="number" id="save-target" placeholder="Target Goal ($)" step="0.01" required class="border-slate-300 rounded-md p-2 border text-sm focus:ring-2 focus:ring-sky-500">
+                    <input type="number" id="save-yield" placeholder="APY / Yield (%)" step="0.01" required class="border-slate-300 rounded-md p-2 border text-sm focus:ring-2 focus:ring-sky-500">
+                    
+                    <button type="submit" class="bg-sky-600 text-white px-4 py-2 rounded-md hover:bg-sky-500 transition text-sm font-semibold lg:col-span-6">+ Add Asset Account</button>
+                </form>
+
+                <div class="overflow-x-auto border rounded-lg border-slate-100">
+                    <table class="w-full text-left text-sm min-w-[950px]">
+                        <thead class="bg-slate-50 text-slate-600">
+                            <tr>
+                                <th class="p-3 font-semibold">Account & Ticker</th>
+                                <th class="p-3 font-semibold">Linked Bucket</th>
+                                <th class="p-3 font-semibold text-right">APY</th>
+                                <th class="p-3 font-semibold text-right">Current Value</th>
+                                <th class="p-3 font-semibold text-center w-40">Goal Target & Progress</th>
+                                <th class="p-3 font-semibold text-center">Target Lag (<span class="target-month-name"></span>)</th>
+                                <th class="p-3 font-semibold text-center">Months to Goal</th>
+                                <th class="p-3 font-semibold text-center">Market Performance</th>
+                                <th class="p-3 font-semibold text-center text-sky-600 font-bold">12-Mo Forecast</th>
+                                <th class="p-3 font-semibold text-center w-20">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="list-savings" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <!-- VIEW 5: DEBT AMORTIZATION PIPELINE -->
+        <div id="view-section-debts" class="space-y-6 app-view-panel hidden">
+            <section class="bg-slate-900 text-white p-6 rounded-xl shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border border-slate-800">
+                <div>
+                    <span class="text-xs uppercase font-bold text-sky-400 tracking-wider">Payoff Priority Spotlight (<span id="text-active-strategy-name">Snowball Strategy</span>)</span>
+                    <div id="debt-priority-spotlight" class="text-2xl font-extrabold text-white mt-1">No Debts Recorded</div>
+                    <p id="debt-priority-action" class="text-xs text-slate-300 mt-0.5 max-w-sm leading-snug">Add debt accounts to see automated payment targets based on your available cash flow.</p>
+                </div>
+                
+                <div class="flex flex-wrap sm:flex-nowrap gap-3 w-full md:w-auto">
+                    <div class="text-right bg-slate-800 p-4 rounded-lg border border-slate-700 flex-1 sm:w-auto shrink-0">
+                        <div class="text-xs font-semibold text-slate-400 uppercase">Required Min Payments</div>
+                        <div id="text-total-min-payments" class="text-2xl font-black text-white">$0.00</div>
+                    </div>
+                    <div class="text-right bg-slate-800 p-4 rounded-lg border border-slate-700 flex-1 sm:w-auto shrink-0">
+                        <div class="text-xs font-semibold text-slate-400 uppercase">Total Liability</div>
+                        <div id="text-total-debt" class="text-2xl font-black text-red-400">$0.00</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-slate-900">Debt Payoff Reduction Curve</h2>
+                    <span class="text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">🎯 Milestones Plotted</span>
+                </div>
+                <div class="relative h-72 w-full">
+                    <canvas id="chart-debt"></canvas>
+                </div>
+            </section>
+
+            <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-100 pb-3 gap-4">
+                    <h2 class="text-xl font-bold text-slate-900">Liability Accounts & TFP Equivalency</h2>
+                    <div class="inline-flex rounded-md shadow-sm bg-slate-100 p-1">
+                        <button id="strategy-snowball" class="px-4 py-1.5 text-xs font-semibold rounded-md transition">Snowball (Lowest Balance First)</button>
+                        <button id="strategy-avalanche" class="px-4 py-1.5 text-xs font-semibold rounded-md transition">Avalanche (Highest Rate First)</button>
+                    </div>
+                </div>
+
+                <form id="form-debt" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-2 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <input type="text" id="debt-name" placeholder="Debt Name (e.g. Visa)" required class="lg:col-span-2 border-slate-300 rounded-md p-2 border text-sm focus:ring-2 focus:ring-sky-500">
+                    <select id="debt-type" required class="border-slate-300 rounded-md p-2 border text-sm focus:ring-2 focus:ring-sky-500 bg-white">
+                        <option value="" disabled selected>Type...</option>
+                        <option value="Credit Card">Credit Card</option>
+                        <option value="Auto Loan">Auto Loan</option>
+                        <option value="Student Loan">Student Loan</option>
+                        <option value="Other">Other</option>
+                    </select>
+                    <input type="number" id="debt-balance" placeholder="Balance ($)" step="0.01" required class="border-slate-300 rounded-md p-2 border text-sm focus:ring-2 focus:ring-sky-500">
+                    <input type="number" id="debt-rate" placeholder="Rate (%)" step="0.01" required class="border-slate-300 rounded-md p-2 border text-sm focus:ring-2 focus:ring-sky-500">
+                    <input type="number" id="debt-min" placeholder="Min Pay ($)" step="0.01" required class="border-slate-300 rounded-md p-2 border text-sm focus:ring-2 focus:ring-sky-500">
+                    <input type="number" id="debt-day" placeholder="Due Day" min="1" max="31" required class="border-slate-300 rounded-md p-2 border text-sm focus:ring-2 focus:ring-sky-500">
+                    <button type="submit" class="bg-sky-600 text-white px-4 py-2 rounded-md hover:bg-sky-500 transition text-sm font-semibold sm:col-span-2 lg:col-span-7">+ Add Debt Account</button>
+                </form>
+
+                <div class="overflow-x-auto border rounded-lg border-slate-100">
+                    <table class="w-full text-left text-sm min-w-[950px]">
+                        <thead class="bg-slate-50 text-slate-600">
+                            <tr>
+                                <th class="p-3 font-semibold">Debt Name</th>
+                                <th class="p-3 font-semibold">Type</th>
+                                <th class="p-3 font-semibold text-center">Due Day</th>
+                                <th class="p-3 font-semibold text-center">Status</th>
+                                <th class="p-3 font-semibold text-right">Min Payment</th>
+                                <th class="p-3 font-semibold text-right">Current Balance</th>
+                                <th class="p-3 font-semibold text-center bg-sky-50 border-x border-sky-100 text-sky-900">TFP Work-Cost</th>
+                                <th class="p-3 font-semibold text-center">Projected Freedom</th>
+                                <th class="p-3 font-semibold text-center w-24">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="list-debts" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        const monthsConfig = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const STATE_VERSION = 23;
+        const TFP_RATE_REG = 43.78;
+        const TFP_RATE_15 = 65.67;
+        const TFP_RATE_20 = 87.56;
+        const PER_DIEM_RATE = 2.80;
+        const TAX_RATE = 0.23; 
+        
+        function escapeHtml(str) {
+            if (typeof str !== 'string') return str;
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        // Helper to handle HH:MM or decimal inputs
+        function parseTimeInput(val) {
+            if (!val) return 0;
+            if (typeof val === 'string' && val.includes(':')) {
+                const parts = val.split(':');
+                const hrs = parseFloat(parts[0]) || 0;
+                const mins = parseFloat(parts[1]) || 0;
+                return hrs + (mins / 60);
+            }
+            return parseFloat(val) || 0;
+        }
+
+        function formatTafbDisplay(decimalHours) {
+            if (!decimalHours) return "0:00";
+            const hrs = Math.floor(decimalHours);
+            const mins = Math.round((decimalHours - hrs) * 60);
+            return `${hrs}:${mins.toString().padStart(2, '0')}`;
+        }
+
+        const defaultState = {
+            version: STATE_VERSION,
+            activeViewTab: 'sandbox',
+            advancePay: 1500,
+            debtStrategy: 'snowball',
+            activeMonth: "Aug",
+            finnhubKey: '',
+            buckets: [
+                { id: 3, name: 'Home Repairs', percentage: 4 },
+                { id: 4, name: 'Vacancy Fund', percentage: 8 },
+                { id: 5, name: 'Date Night', percentage: 4 }
+            ],
+            trips: { "Jan": [], "Feb": [], "Mar": [], "Apr": [], "May": [], "Jun": [], "Jul": [], "Aug": [], "Sep": [], "Oct": [], "Nov": [], "Dec": [] },
+            expenses: { "Jan": [], "Feb": [], "Mar": [], "Apr": [], "May": [], "Jun": [], "Jul": [], "Aug": [], "Sep": [], "Oct": [], "Nov": [], "Dec": [] },
+            inflows: { "Jan": [], "Feb": [], "Mar": [], "Apr": [], "May": [], "Jun": [], "Jul": [], "Aug": [], "Sep": [], "Oct": [], "Nov": [], "Dec": [] },
+            masterBills: [],
+            billOverrides: { "Jan": {}, "Feb": {}, "Mar": {}, "Apr": {}, "May": {}, "Jun": {}, "Jul": {}, "Aug": {}, "Sep": {}, "Oct": {}, "Nov": {}, "Dec": {} },
+            coveredBills: {},
+            billPaidOverrides: {},
+            debtPaidOverrides: {},
+            debts: [],
+            savings: []
+        };
+
+        let rawSaved = localStorage.getItem('brianna_flight_finance_v1');
+        let state = rawSaved ? JSON.parse(rawSaved) : defaultState;
+
+        if (!state.version || state.version < STATE_VERSION) {
+            state.version = STATE_VERSION;
+            if (!state.trips) state.trips = defaultState.trips;
+        }
+
+        function normalizeStateSchema(targetState) {
+            targetState.version = STATE_VERSION;
+            targetState.expenses = targetState.expenses || {};
+            targetState.inflows = targetState.inflows || {};
+            targetState.trips = targetState.trips || {};
+            targetState.masterBills = targetState.masterBills || [];
+            targetState.billOverrides = targetState.billOverrides || {};
+            targetState.coveredBills = targetState.coveredBills || {};
+            targetState.billPaidOverrides = targetState.billPaidOverrides || {};
+            targetState.debtPaidOverrides = targetState.debtPaidOverrides || {};
+            targetState.debts = targetState.debts || [];
+            targetState.savings = targetState.savings || [];
+            targetState.buckets = targetState.buckets || defaultState.buckets;
+            targetState.activeViewTab = targetState.activeViewTab || 'sandbox';
+            targetState.advancePay = targetState.advancePay ?? 1500;
+
+            const currentRealMonth = monthsConfig[new Date().getMonth()] || "Aug";
+            if (!targetState.activeMonth || !monthsConfig.includes(targetState.activeMonth)) {
+                targetState.activeMonth = currentRealMonth;
+            }
+
+            monthsConfig.forEach(m => {
+                if(!targetState.trips[m]) targetState.trips[m] = [];
+                
+                targetState.trips[m].forEach(t => {
+                    if (t.baseTfp === undefined) t.baseTfp = t.tfp || 0;
+                    if (t.boardingPay === undefined) t.boardingPay = 0;
+                    if (t.sitPay === undefined) t.sitPay = 0;
+                });
+
+                if(!targetState.expenses[m]) targetState.expenses[m] = [];
+                if(!targetState.inflows[m]) targetState.inflows[m] = [];
+                if(!targetState.billOverrides[m]) targetState.billOverrides[m] = {};
+                if(!targetState.coveredBills[m]) targetState.coveredBills[m] = {};
+                if(!targetState.billPaidOverrides[m]) targetState.billPaidOverrides[m] = {};
+                if(!targetState.debtPaidOverrides[m]) targetState.debtPaidOverrides[m] = {};
+            });
+        }
+        
+        normalizeStateSchema(state);
+
+        let editingDebtId = null;
+        let editingBillId = null;
+        let editingSavingsId = null;
+        let cashflowChart = null;
+        let networthChart = null;
+        let savingsChart = null;
+        let debtChart = null;
+
+        const DOM = {};
+
+        function cacheDOM() {
+            DOM.sandboxAdvance = document.getElementById('sandbox-advance');
+            DOM.sandboxTrueupDisplay = document.getElementById('sandbox-trueup-display');
+            DOM.formSandboxTrip = document.getElementById('form-sandbox-trip');
+            DOM.sandboxTripBoard = document.getElementById('sandbox-trip-board');
+            DOM.sandboxWarningBanner = document.getElementById('sandbox-warning-banner');
+            DOM.sandboxWarningText = document.getElementById('sandbox-warning-text');
+
+            DOM.dashTotalTfp = document.getElementById('dash-total-tfp');
+            DOM.dashGrossPay = document.getElementById('dash-gross-pay');
+            DOM.dashTrueupPay = document.getElementById('dash-trueup-pay');
+            DOM.dashTotalTafb = document.getElementById('dash-total-tafb');
+            
+            DOM.targetTfpReg = document.getElementById('target-tfp-reg');
+            DOM.targetTfpPrem = document.getElementById('target-tfp-prem');
+
+            DOM.summaryDeductionsVal = document.getElementById('summary-deductions-val');
+            
+            DOM.estBase = document.getElementById('est-base');
+            DOM.estBoarding = document.getElementById('est-boarding');
+            DOM.estSit = document.getElementById('est-sit');
+            DOM.estMult = document.getElementById('est-mult');
+            DOM.estTafb = document.getElementById('est-tafb');
+            DOM.estResultNet = document.getElementById('est-result-net');
+            DOM.estResultBreakdown = document.getElementById('est-result-breakdown');
+
+            DOM.bucketsContainer = document.getElementById('buckets-container');
+            DOM.btnAddBucket = document.getElementById('btn-add-bucket');
+            DOM.monthTabsContainer = document.getElementById('month-tabs-container');
+            DOM.calendarGridContainer = document.getElementById('calendar-grid-container');
+            DOM.textAllocated = document.getElementById('text-allocated');
+            DOM.textUnallocated = document.getElementById('text-unallocated');
+            DOM.textTotalDebt = document.getElementById('text-total-debt');
+            DOM.textTotalMinPayments = document.getElementById('text-total-min-payments');
+            DOM.textAvailableCash = document.getElementById('text-available-cash');
+            DOM.textNetworthVal = document.getElementById('text-networth-val');
+            DOM.summaryIncomeVal = document.getElementById('summary-income-val');
+            DOM.summaryOutflowVal = document.getElementById('summary-outflow-val');
+            DOM.summaryPerDiemVal = document.getElementById('summary-perdiem-val');
+            DOM.listExpenses = document.getElementById('list-expenses');
+            DOM.listInflows = document.getElementById('list-inflows');
+            DOM.listBills = document.getElementById('list-bills');
+            DOM.listDebts = document.getElementById('list-debts');
+            DOM.listSavings = document.getElementById('list-savings');
+            DOM.formExpense = document.getElementById('form-expense');
+            DOM.expTypeSelect = document.getElementById('exp-type');
+            DOM.quickSplitBar = document.getElementById('quick-split-bar');
+            DOM.formInflow = document.getElementById('form-inflow');
+            DOM.formBill = document.getElementById('form-bill');
+            DOM.billSplitCheck = document.getElementById('bill-split');
+            DOM.splitDaysContainer = document.getElementById('split-days-container');
+            DOM.billPull1Input = document.getElementById('bill-pull-1');
+            DOM.billPull2Input = document.getElementById('bill-pull-2');
+            DOM.formDebt = document.getElementById('form-debt');
+            DOM.formSavings = document.getElementById('form-savings');
+            DOM.expBucketDropdown = document.getElementById('exp-bucket');
+            DOM.saveBucketDropdown = document.getElementById('save-bucket');
+            DOM.inputFinnhubKey = document.getElementById('input-finnhub-key');
+            DOM.btnSyncPrices = document.getElementById('btn-sync-prices');
+            DOM.btnExport = document.getElementById('btn-export');
+            DOM.btnImport = document.getElementById('btn-import');
+            DOM.stratSnowball = document.getElementById('strategy-snowball');
+            DOM.stratAvalanche = document.getElementById('strategy-avalanche');
+            DOM.monthNavigationBar = document.getElementById('month-navigation-bar');
+            DOM.textTotalSavings = document.getElementById('text-total-savings');
+            DOM.textProjectedSavings = document.getElementById('text-projected-savings');
+            DOM.textRunwayMonths = document.getElementById('text-runway-months');
+            DOM.debtPrioritySpotlight = document.getElementById('debt-priority-spotlight');
+            DOM.debtPriorityAction = document.getElementById('debt-priority-action');
+            DOM.textActiveStrategyName = document.getElementById('text-active-strategy-name');
+        }
+
+        window.hardResetApp = function() {
+            if (confirm("Are you sure you want to clear your local cache? This will reset local data to defaults.")) {
+                localStorage.removeItem('brianna_flight_finance_v1');
+                location.reload();
+            }
+        };
+
+        function getCalculatedIncome() {
+            let totalRegBase = 0, total15Base = 0, total20Base = 0;
+            let totalSoftTfp = 0;
+            let totalTafb = 0;
+            let activeTrips = state.trips[state.activeMonth] || [];
+
+            activeTrips.forEach(t => {
+                if (!t.isDropped) {
+                    if (t.multiplier === 1) totalRegBase += (t.baseTfp || 0);
+                    if (t.multiplier === 1.5) total15Base += (t.baseTfp || 0);
+                    if (t.multiplier === 2) total20Base += (t.baseTfp || 0);
+                    
+                    totalSoftTfp += (t.boardingPay || 0) + (t.sitPay || 0) + (t.adjustments || 0);
+                    totalTafb += (t.tafb || 0);
+                }
+            });
+
+            const baseGross = (totalRegBase * TFP_RATE_REG) + (total15Base * TFP_RATE_15) + (total20Base * TFP_RATE_20);
+            const softGross = totalSoftTfp * TFP_RATE_REG;
+            
+            const grossFlight = baseGross + softGross;
+            const netFlightPay = grossFlight * (1 - TAX_RATE);
+            const perDiemTotal = totalTafb * PER_DIEM_RATE;
+
+            return { totalRegBase, total15Base, total20Base, totalSoftTfp, totalTafb, grossFlight, netFlightPay, perDiemTotal, totalNet: netFlightPay + perDiemTotal };
+        }
+
+        function calculateTripEstimator() {
+            if (!DOM.estBase || !DOM.estBoarding || !DOM.estSit || !DOM.estMult || !DOM.estTafb) return;
+            
+            const baseTfp = parseFloat(DOM.estBase.value) || 0;
+            const boardingTfp = parseFloat(DOM.estBoarding.value) || 0;
+            const sitTfp = parseFloat(DOM.estSit.value) || 0;
+            const mult = parseFloat(DOM.estMult.value) || 1;
+            const tafb = parseTimeInput(DOM.estTafb.value);
+
+            let baseRate = TFP_RATE_REG;
+            if (mult === 1.5) baseRate = TFP_RATE_15;
+            if (mult === 2.0) baseRate = TFP_RATE_20;
+
+            const grossBase = baseTfp * baseRate;
+            const grossSoft = (boardingTfp + sitTfp) * TFP_RATE_REG;
+            const grossTotal = grossBase + grossSoft;
+            
+            const taxes = grossTotal * TAX_RATE;
+            const netFlight = grossTotal - taxes;
+            const perDiem = tafb * PER_DIEM_RATE;
+            const totalNet = netFlight + perDiem;
+
+            if (DOM.estResultNet) DOM.estResultNet.textContent = `$${totalNet.toFixed(2)}`;
+            if (DOM.estResultBreakdown) DOM.estResultBreakdown.textContent = `Gross: $${grossTotal.toFixed(2)} | Tax: -$${taxes.toFixed(2)} | Per Diem: $${perDiem.toFixed(2)}`;
+        }
+
+        function init() {
+            cacheDOM();
+
+            if (!state.activeMonth || !monthsConfig.includes(state.activeMonth)) {
+                state.activeMonth = monthsConfig[new Date().getMonth()] || "Aug";
+            }
+
+            if (DOM.sandboxAdvance) DOM.sandboxAdvance.value = state.advancePay;
+            
+            toggleStrategyUI();
+            renderMonthTabs();
+            renderBuckets();
+            syncDropdownOptions();
+            setupEventListeners();
+            calculateTripEstimator();
+            switchView(state.activeViewTab || 'sandbox'); 
+        }
+
+        function switchView(viewName) {
+            state.activeViewTab = viewName;
+            localStorage.setItem('brianna_flight_finance_v1', JSON.stringify(state));
+
+            document.querySelectorAll('.app-view-panel').forEach(panel => panel.classList.add('hidden'));
+            const targetPanel = document.getElementById(`view-section-${viewName}`);
+            if (targetPanel) targetPanel.classList.remove('hidden');
+
+            document.querySelectorAll('nav button').forEach(btn => {
+                if (btn.id.startsWith('tab-view-')) {
+                    btn.className = "flex-1 min-w-[120px] text-center py-2.5 text-sm font-bold rounded-lg transition text-slate-500 hover:bg-slate-50 hover:text-slate-900 bg-white border border-transparent";
+                }
+            });
+            const activeTabButton = document.getElementById(`tab-view-${viewName}`);
+            if (activeTabButton) {
+                if (viewName === 'sandbox') {
+                    activeTabButton.className = "flex-1 min-w-[120px] text-center py-2.5 text-sm font-bold rounded-lg transition text-sky-600 bg-sky-50 shadow-sm border border-sky-100";
+                } else {
+                    activeTabButton.className = "flex-1 min-w-[120px] text-center py-2.5 text-sm font-bold rounded-lg transition bg-slate-900 text-white shadow-sm border border-slate-900";
+                }
+            }
+
+            if (['dashboard', 'ledger', 'savings', 'debts', 'sandbox'].includes(viewName)) {
+                if (DOM.monthNavigationBar) DOM.monthNavigationBar.classList.remove('hidden');
+            } else {
+                if (DOM.monthNavigationBar) DOM.monthNavigationBar.classList.add('hidden');
+            }
+
+            saveState();
+        }
+
+        function saveState() {
+            localStorage.setItem('brianna_flight_finance_v1', JSON.stringify(state));
+            renderSandbox();
+            renderLists();
+            updateUI();
+        }
+
+        function toggleStrategyUI() {
+            if (state.debtStrategy === 'snowball') {
+                if (DOM.stratSnowball) DOM.stratSnowball.className = "px-4 py-1.5 text-xs font-semibold rounded-md bg-white text-slate-900 shadow-sm transition border border-slate-200";
+                if (DOM.stratAvalanche) DOM.stratAvalanche.className = "px-4 py-1.5 text-xs font-semibold rounded-md text-slate-500 hover:text-slate-900 transition";
+                if (DOM.textActiveStrategyName) DOM.textActiveStrategyName.textContent = "Snowball Strategy";
+            } else {
+                if (DOM.stratAvalanche) DOM.stratAvalanche.className = "px-4 py-1.5 text-xs font-semibold rounded-md bg-white text-slate-900 shadow-sm transition border border-slate-200";
+                if (DOM.stratSnowball) DOM.stratSnowball.className = "px-4 py-1.5 text-xs font-semibold rounded-md text-slate-500 hover:text-slate-900 transition";
+                if (DOM.textActiveStrategyName) DOM.textActiveStrategyName.textContent = "Avalanche Strategy";
+            }
+        }
+
+        function toggleAssetModeUI(mode) {
+            const balInput = document.getElementById('save-balance');
+            const tickerInput = document.getElementById('save-ticker');
+            const sharesInput = document.getElementById('save-shares');
+            const basisInput = document.getElementById('save-costbasis');
+
+            if (mode === 'autosync') {
+                if (balInput) { balInput.classList.add('hidden'); balInput.required = false; }
+                if (tickerInput) { tickerInput.classList.remove('hidden'); tickerInput.required = true; }
+                if (sharesInput) { sharesInput.classList.remove('hidden'); sharesInput.required = true; }
+                if (basisInput) { basisInput.classList.remove('hidden'); basisInput.required = true; }
+            } else {
+                if (balInput) { balInput.classList.remove('hidden'); balInput.required = true; }
+                if (tickerInput) { tickerInput.classList.add('hidden'); tickerInput.required = false; }
+                if (sharesInput) { sharesInput.classList.add('hidden'); sharesInput.required = false; }
+                if (basisInput) { basisInput.classList.add('hidden'); basisInput.required = false; }
+            }
+        }
+
+        async function refreshFinnhubPrices() {
+            const apiKey = state.finnhubKey || (DOM.inputFinnhubKey ? DOM.inputFinnhubKey.value.trim() : '');
+            const autoSyncAssets = state.savings.filter(s => s.mode === 'autosync' && s.ticker);
+
+            if (autoSyncAssets.length === 0) {
+                alert("No accounts set to 'Auto-Sync Ticker' mode.");
+                return;
+            }
+
+            if (DOM.btnSyncPrices) { DOM.btnSyncPrices.textContent = "⏳ Fetching..."; DOM.btnSyncPrices.disabled = true; }
+
+            let updatedCount = 0;
+
+            for (let asset of autoSyncAssets) {
+                const sym = asset.ticker.trim().toUpperCase();
+                let fetchedPrice = 0;
+
+                if (apiKey) {
+                    try {
+                        const response = await fetch(`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${apiKey}`);
+                        const data = await response.json();
+                        if (data && data.c && data.c > 0) {
+                            fetchedPrice = parseFloat(data.c);
+                        }
+                    } catch (e) {
+                        console.log(`Finnhub quote missed for ${sym}, trying Yahoo Finance CORS bridge...`);
+                    }
+                }
+
+                if (fetchedPrice === 0) {
+                    try {
+                        const targetUrl = encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${sym}`);
+                        const response = await fetch(`https://api.allorigins.win/raw?url=${targetUrl}`);
+                        const data = await response.json();
+                        
+                        if (data && data.chart && data.chart.result && data.chart.result.length > 0) {
+                            const meta = data.chart.result[0].meta;
+                            const liveVal = meta.regularMarketPrice || meta.chartPreviousClose;
+                            if (liveVal && !isNaN(liveVal) && liveVal > 0) {
+                                fetchedPrice = parseFloat(liveVal);
+                            }
+                        }
+                    } catch (err) {
+                        console.error(`Error fetching Yahoo quote for ${sym}:`, err);
+                    }
+                }
+
+                if (fetchedPrice > 0) {
+                    asset.livePrice = fetchedPrice;
+                    const totalShares = parseFloat(asset.shares || 0);
+                    asset.balance = parseFloat((totalShares * fetchedPrice).toFixed(2));
+                    asset.lastUpdated = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    updatedCount++;
+                }
+            }
+
+            if (DOM.btnSyncPrices) { DOM.btnSyncPrices.textContent = "🔄 Refresh Prices"; DOM.btnSyncPrices.disabled = false; }
+
+            if (updatedCount > 0) {
+                alert(`Successfully refreshed ${updatedCount} asset quotes!`);
+            } else {
+                alert("Could not fetch updated market quotes for the specified tickers. Please verify symbol formatting.");
+            }
+
+            saveState();
+        }
+
+        function isBillPaidStatus(bill, monthName) {
+            const manualVal = state.billPaidOverrides[monthName]?.[bill.id];
+            if (manualVal !== undefined) return manualVal;
+
+            const now = new Date();
+            const currentMonthName = monthsConfig[now.getMonth()];
+            
+            const targetMonthIdx = monthsConfig.indexOf(monthName);
+            const currentMonthIdx = monthsConfig.indexOf(currentMonthName);
+
+            if (targetMonthIdx < currentMonthIdx) return true;
+            if (targetMonthIdx > currentMonthIdx) return false;
+
+            const todayDay = now.getDate();
+            const primaryDue = parseInt(bill.day, 10);
+
+            if (!bill.isSplit) {
+                return todayDay >= primaryDue;
+            } else {
+                const p1 = parseInt(bill.pull1, 10) || primaryDue;
+                const p2 = parseInt(bill.pull2, 10) || 15;
+                return todayDay >= Math.max(p1, p2);
+            }
+        }
+
+        function isDebtPaidStatus(debt, monthName) {
+            const manualVal = state.debtPaidOverrides[monthName]?.[debt.id];
+            if (manualVal !== undefined) return manualVal;
+
+            const now = new Date();
+            const currentMonthName = monthsConfig[now.getMonth()];
+            
+            const targetMonthIdx = monthsConfig.indexOf(monthName);
+            const currentMonthIdx = monthsConfig.indexOf(currentMonthName);
+
+            if (targetMonthIdx < currentMonthIdx) return true;
+            if (targetMonthIdx > currentMonthIdx) return false;
+
+            const todayDay = now.getDate();
+            const primaryDue = parseInt(debt.day || 1, 10);
+            return todayDay >= primaryDue;
+        }
+
+        function syncDropdownOptions() {
+            if (!DOM.expBucketDropdown || !DOM.saveBucketDropdown) return;
+
+            const expVal = DOM.expBucketDropdown.value;
+            const saveVal = DOM.saveBucketDropdown.value;
+
+            let bucketHtml = `<option value="general">General Spending</option>` + 
+                state.buckets.map(b => `<option value="${b.id}">${escapeHtml(b.name)}</option>`).join('');
+
+            if (state.debts.length > 0) {
+                bucketHtml += `<optgroup label="💳 Extra Debt Payments">` + 
+                    state.debts.map(d => `<option value="debt-${d.id}">Extra: ${escapeHtml(d.name)}</option>`).join('') +
+                    `</optgroup>`;
+            }
+
+            DOM.expBucketDropdown.innerHTML = bucketHtml;
+
+            DOM.saveBucketDropdown.innerHTML = `<option value="none" selected>None (Pre-Tax / Standalone Investment)</option>` + 
+                state.buckets.map(b => `<option value="${b.id}">${escapeHtml(b.name)}</option>`).join('');
+            
+            if (state.buckets.some(b => b.id == expVal) || expVal === 'general' || (expVal && expVal.startsWith('debt-'))) {
+                DOM.expBucketDropdown.value = expVal;
+            }
+            if (state.buckets.some(b => b.id == saveVal) || saveVal === 'none') DOM.saveBucketDropdown.value = saveVal;
+
+            const incomeData = getCalculatedIncome();
+            if (DOM.quickSplitBar) {
+                DOM.quickSplitBar.innerHTML = `<span class="font-bold text-slate-500 self-center">⚡ Quick 50% Fund:</span>` +
+                    state.buckets.map(b => {
+                        const halfVal = ((incomeData.netFlightPay * (parseFloat(b.percentage || 0) / 100)) / 2).toFixed(2);
+                        return `<button type="button" onclick="quickFundHalf(${b.id})" class="bg-sky-50 border border-sky-200 text-sky-700 hover:bg-sky-100 font-medium px-2 py-0.5 rounded transition truncate">${escapeHtml(b.name)} ($${halfVal})</button>`;
+                    }).join('');
+            }
+        }
+
+        window.quickFundHalf = function(bucketId) {
+            const bucket = state.buckets.find(b => b.id === bucketId);
+            if (!bucket) return;
+
+            const incomeData = getCalculatedIncome();
+            const halfAmount = ((incomeData.netFlightPay * (parseFloat(bucket.percentage || 0) / 100)) / 2).toFixed(2);
+
+            state.expenses[state.activeMonth].push({
+                id: Date.now(),
+                desc: `50% Fund: ${bucket.name}`,
+                bucketId: bucket.id,
+                logType: 'transfer',
+                amount: parseFloat(halfAmount)
+            });
+
+            saveState();
+        };
+
+        function updateUI() {
+            if (!state.activeMonth || !monthsConfig.includes(state.activeMonth)) {
+                state.activeMonth = monthsConfig[new Date().getMonth()] || "Aug";
+            }
+
+            const incomeData = getCalculatedIncome();
+            const advance = parseFloat(state.advancePay) || 0;
+            const trueUp = Math.max(0, incomeData.netFlightPay - advance);
+
+            if (DOM.textTrueUpPay) DOM.textTrueUpPay.textContent = `$${trueUp.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            if (DOM.sandboxTrueupDisplay) DOM.sandboxTrueupDisplay.textContent = `$${trueUp.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+            if (DOM.dashTotalTfp) DOM.dashTotalTfp.textContent = (incomeData.totalRegBase + incomeData.total15Base + incomeData.total20Base + incomeData.totalSoftTfp).toFixed(1);
+            if (DOM.dashGrossPay) DOM.dashGrossPay.textContent = `$${incomeData.grossFlight.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            if (DOM.dashTrueupPay) DOM.dashTrueupPay.textContent = `$${trueUp.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            if (DOM.dashTotalTafb) DOM.dashTotalTafb.textContent = formatTafbDisplay(incomeData.totalTafb);
+
+            const totalPercentage = state.buckets.reduce((sum, b) => sum + parseFloat(b.percentage || 0), 0);
+            if (DOM.textAllocated) DOM.textAllocated.textContent = `${totalPercentage.toFixed(1)}%`;
+            
+            const unallocated = 100 - totalPercentage;
+            if (DOM.textUnallocated) {
+                DOM.textUnallocated.textContent = `${unallocated.toFixed(1)}%`;
+                DOM.textUnallocated.className = unallocated < 0 ? "text-red-500 font-bold" : "text-emerald-600 font-bold";
+            }
+
+            document.querySelectorAll('.target-month-name').forEach(el => el.textContent = state.activeMonth);
+
+            renderMonthTabs();
+            calculateVarianceAndProjections();
+            renderCalendarGrid();
+        }
+
+        function renderMonthTabs() {
+            if (!DOM.monthTabsContainer) return;
+            DOM.monthTabsContainer.innerHTML = '';
+            monthsConfig.forEach(month => {
+                const isActive = state.activeMonth === month;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = `flex-1 text-center py-2 text-xs font-bold rounded-lg transition ${
+                    isActive ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 bg-slate-50/50'
+                }`;
+                btn.textContent = month;
+                btn.addEventListener('click', () => {
+                    state.activeMonth = month;
+                    syncDropdownOptions();
+                    saveState();
+                });
+                DOM.monthTabsContainer.appendChild(btn);
+            });
+        }
+
+        function calculateVarianceAndProjections() {
+            const incomeData = getCalculatedIncome();
+            const currentMonthExpenses = state.expenses[state.activeMonth] || [];
+            const currentMonthInflows = state.inflows[state.activeMonth] || [];
+            
+            const extraInflowTotal = currentMonthInflows.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
+            const usableFlightIncome = incomeData.netFlightPay + extraInflowTotal;
+
+            // 1. Calculate Debt Liabilities & Minimum Payments FIRST
+            let sortedDebts = state.debts.map(d => {
+                let loggedExtraPayments = 0;
+                monthsConfig.forEach(m => {
+                    if (state.expenses[m]) {
+                        loggedExtraPayments += state.expenses[m]
+                            .filter(e => e.bucketId === `debt-${d.id}`)
+                            .reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+                    }
+                });
+
+                const netCurrentBal = Math.max(0, parseFloat(d.balance) - loggedExtraPayments);
+
+                return {
+                    ...d, 
+                    balance: netCurrentBal, 
+                    rawBalance: parseFloat(d.balance),
+                    extraPaid: loggedExtraPayments,
+                    rate: parseFloat(d.rate)/100, 
+                    min: parseFloat(d.min), 
+                    monthsToPay: 0
+                };
+            });
+
+            const totalNetDebt = sortedDebts.reduce((sum, debt) => sum + debt.balance, 0);
+            if (DOM.textTotalDebt) DOM.textTotalDebt.textContent = `$${totalNetDebt.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+
+            const activeDebts = sortedDebts.filter(d => d.balance > 0);
+            const totalMinAll = activeDebts.reduce((s, d) => s + d.min, 0);
+
+            if (DOM.textTotalMinPayments) DOM.textTotalMinPayments.textContent = `$${totalMinAll.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+            // 2. Fixed Bills
+            let monthBillSum = 0;
+            let monthPaidBillsSum = 0;
+            let monthPendingBillsSum = 0;
+
+            state.masterBills.forEach(bill => {
+                const isCovered = state.coveredBills[state.activeMonth]?.[bill.id];
+                if (!isCovered) {
+                    const override = state.billOverrides[state.activeMonth]?.[bill.id];
+                    const amt = override !== undefined ? parseFloat(override) : parseFloat(bill.amount);
+                    monthBillSum += amt;
+
+                    if (isBillPaidStatus(bill, state.activeMonth)) {
+                        monthPaidBillsSum += amt;
+                    } else {
+                        monthPendingBillsSum += amt;
+                    }
+                }
+            });
+
+            // 3. Discretionary & Buckets
+            const generalOutflows = currentMonthExpenses
+                .filter(exp => exp.bucketId === 'general' && exp.logType !== 'transfer')
+                .reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
+
+            const totalBucketTargetDollars = state.buckets.reduce((sum, b) => sum + (usableFlightIncome * (parseFloat(b.percentage || 0) / 100)), 0);
+
+            // TOTAL OUTFLOWS INCLUDES: Fixed Bills + Minimum Debt Payments + General Spending + Buckets
+            const totalOutflowsAndReserved = monthBillSum + totalMinAll + generalOutflows + totalBucketTargetDollars;
+            const availableNetCash = usableFlightIncome - totalOutflowsAndReserved;
+
+            if (DOM.textAvailableCash) DOM.textAvailableCash.textContent = `$${availableNetCash.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            if (DOM.summaryIncomeVal) DOM.summaryIncomeVal.textContent = `$${usableFlightIncome.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            if (DOM.summaryOutflowVal) DOM.summaryOutflowVal.textContent = `$${totalOutflowsAndReserved.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            if (DOM.summaryPerDiemVal) DOM.summaryPerDiemVal.textContent = `$${incomeData.perDiemTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+
+            if (DOM.summaryDeductionsVal) {
+                const deductions = incomeData.grossFlight * TAX_RATE;
+                DOM.summaryDeductionsVal.textContent = `-$${deductions.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            }
+
+            // TFP Target Engine & Friction Warning
+            const requiredGross = totalOutflowsAndReserved / (1 - TAX_RATE);
+            const reqTfpReg = Math.ceil(requiredGross / TFP_RATE_REG);
+            const reqTfpPrem = Math.ceil(requiredGross / TFP_RATE_15);
+            
+            if (DOM.targetTfpReg) DOM.targetTfpReg.textContent = reqTfpReg;
+            if (DOM.targetTfpPrem) DOM.targetTfpPrem.textContent = reqTfpPrem;
+
+            let scheduledTfp = incomeData.totalRegBase + (incomeData.total15Base * 1.5) + (incomeData.total20Base * 2.0) + incomeData.totalSoftTfp;
+            
+            if (DOM.sandboxWarningBanner) {
+                if (scheduledTfp < reqTfpReg && totalOutflowsAndReserved > 0) {
+                    const short = reqTfpReg - scheduledTfp;
+                    DOM.sandboxWarningText.innerHTML = `Your scheduled month is currently <strong>${short.toFixed(1)} 1.0x-equivalent TFP short</strong> of covering your fixed bills, debt minimums ($${totalMinAll.toFixed(2)}), and bucket targets. Pick up an open-time trip.`;
+                    DOM.sandboxWarningBanner.classList.remove('hidden');
+                } else {
+                    DOM.sandboxWarningBanner.classList.add('hidden');
+                }
+            }
+
+            let totalAvailableDebtPool = 0;
+            const debtBuckets = state.buckets.filter(b => b.name.toLowerCase().includes('debt'));
+            debtBuckets.forEach(b => {
+                totalAvailableDebtPool += usableFlightIncome * (parseFloat(b.percentage || 0) / 100);
+            });
+
+            if (state.debtStrategy === 'snowball') {
+                sortedDebts.sort((a, b) => a.balance - b.balance);
+            } else {
+                sortedDebts.sort((a, b) => b.rate - a.rate);
+            }
+
+            const primaryTarget = sortedDebts.find(d => d.balance > 0);
+
+            if (DOM.debtPrioritySpotlight && DOM.debtPriorityAction) {
+                if (primaryTarget) {
+                    const extraRollover = Math.max(0, totalAvailableDebtPool - totalMinAll);
+                    DOM.debtPrioritySpotlight.textContent = primaryTarget.name;
+                    DOM.debtPriorityAction.textContent = `Pay minimum $${primaryTarget.min.toFixed(2)} + $${extraRollover.toFixed(2)} extra rollover cash each month (Total Pool: $${totalAvailableDebtPool.toFixed(2)}).`;
+                } else {
+                    DOM.debtPrioritySpotlight.textContent = state.debts.length > 0 ? "🎉 Debt Free!" : "No Debts Recorded";
+                    DOM.debtPriorityAction.textContent = "All recorded liabilities are paid off.";
+                }
+            }
+
+            let monthCounter = 0;
+            let debtCurvePoints = [sortedDebts.reduce((s, d) => s + d.balance, 0)];
+            let debtMilestones = [];
+
+            while (sortedDebts.some(d => d.balance > 0) && monthCounter < 360) {
+                monthCounter++;
+                let extraRolloverCash = totalAvailableDebtPool;
+
+                sortedDebts.forEach(d => {
+                    if (d.balance > 0) {
+                        d.balance += (d.balance * (d.rate / 12));
+                        let minPayment = Math.min(d.min, d.balance);
+                        d.balance -= minPayment;
+                        extraRolloverCash -= minPayment;
+                    }
+                });
+
+                for (let i = 0; i < sortedDebts.length; i++) {
+                    let d = sortedDebts[i];
+                    if (d.balance > 0) {
+                        let dynamicPayment = Math.min(extraRolloverCash, d.balance);
+                        d.balance -= dynamicPayment;
+                        extraRolloverCash -= dynamicPayment;
+                        
+                        if (d.balance <= 0 && d.monthsToPay === 0) {
+                            d.monthsToPay = monthCounter;
+                            debtMilestones.push({
+                                monthIndex: monthCounter <= 24 ? monthCounter : 24,
+                                actualMonth: monthCounter,
+                                debtName: d.name
+                            });
+                        }
+                        if (extraRolloverCash <= 0) break;
+                    }
+                }
+
+                sortedDebts.forEach(d => {
+                    if (d.balance <= 0 && d.monthsToPay === 0) {
+                        d.monthsToPay = monthCounter;
+                        debtMilestones.push({
+                            monthIndex: monthCounter <= 24 ? monthCounter : 24,
+                            actualMonth: monthCounter,
+                            debtName: d.name
+                        });
+                    }
+                });
+
+                if (monthCounter <= 24) {
+                    debtCurvePoints.push(parseFloat(sortedDebts.reduce((s, d) => s + Math.max(0, d.balance), 0).toFixed(2)));
+                }
+            }
+
+            sortedDebts.forEach(d => {
+                const rowFreedom = document.getElementById(`debt-freedom-${d.id}`);
+                if (rowFreedom) rowFreedom.textContent = d.monthsToPay >= 360 ? "30+ Years" : `${d.monthsToPay} Mos`;
+            });
+
+            if (state.activeViewTab === 'debts') {
+                renderDebtChart(debtCurvePoints, debtMilestones);
+            }
+
+            let currentMonthIdx = monthsConfig.indexOf(state.activeMonth);
+            if (currentMonthIdx < 0) currentMonthIdx = 0;
+
+            let currentTotalSavings = 0;
+            let projectedTotalSavings = 0;
+            let assetTrajectoryLabels = [];
+            let assetTrajectoryData = Array(12).fill(0);
+
+            for (let i = 0; i < 12; i++) {
+                assetTrajectoryLabels.push(monthsConfig[(currentMonthIdx + i) % 12]);
+            }
+
+            state.savings.forEach(asset => {
+                let loggedDepositsAllMonths = 0;
+                if (asset.bucketId && asset.bucketId !== 'none') {
+                    monthsConfig.forEach(m => {
+                        if (state.expenses[m]) {
+                            loggedDepositsAllMonths += state.expenses[m]
+                                .filter(exp => exp.bucketId == asset.bucketId && exp.logType === 'transfer')
+                                .reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
+                        }
+                    });
+                }
+
+                let netCurrentVal = parseFloat(asset.balance || 0) + loggedDepositsAllMonths;
+                currentTotalSavings += netCurrentVal;
+                let runningBalance = netCurrentVal;
+                
+                const rate = parseFloat(asset.yield || 0) / 100;
+                const linkedBucket = state.buckets.find(b => b.id == asset.bucketId);
+                const plannedMonthlyTarget = linkedBucket ? usableFlightIncome * (parseFloat(linkedBucket.percentage || 0) / 100) : 0;
+
+                const loggedInActiveMonth = currentMonthExpenses
+                    .filter(exp => exp.bucketId == asset.bucketId && exp.logType === 'transfer')
+                    .reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
+
+                const activeLag = loggedInActiveMonth - plannedMonthlyTarget;
+
+                const lagCell = document.getElementById(`savings-lag-${asset.id}`);
+                if (lagCell) {
+                    if (linkedBucket) {
+                        if (activeLag >= 0) {
+                            lagCell.innerHTML = `<span class="bg-emerald-100 text-emerald-800 text-xs px-2 py-0.5 rounded font-bold">On Track (+$${activeLag.toFixed(2)})</span>`;
+                        } else {
+                            lagCell.innerHTML = `<span class="bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded font-bold">-$${Math.abs(activeLag).toFixed(2)} Behind</span>`;
+                        }
+                    } else {
+                        lagCell.innerHTML = `<span class="text-xs text-slate-400 font-normal italic">Pre-Tax / N/A</span>`;
+                    }
+                }
+
+                const targetGoal = parseFloat(asset.target || 0);
+                let simBal = netCurrentVal;
+                let monthsToGoal = 0;
+                
+                if (targetGoal > 0 && simBal < targetGoal) {
+                    while (simBal < targetGoal && monthsToGoal < 360) {
+                        monthsToGoal++;
+                        simBal += plannedMonthlyTarget;
+                        simBal += (simBal * (rate / 12));
+                    }
+                }
+
+                const monthsCell = document.getElementById(`savings-months-goal-${asset.id}`);
+                if (monthsCell) {
+                    if (targetGoal <= 0) {
+                        monthsCell.innerHTML = `<span class="text-xs text-slate-400 italic">No Target</span>`;
+                    } else if (netCurrentVal >= targetGoal) {
+                        monthsCell.innerHTML = `<span class="bg-emerald-100 text-emerald-800 text-xs px-2 py-0.5 rounded font-bold">🎯 Goal Met</span>`;
+                    } else if (monthsToGoal >= 360) {
+                        monthsCell.innerHTML = `<span class="text-xs text-slate-500 font-semibold">30+ Years</span>`;
+                    } else {
+                        monthsCell.innerHTML = `<span class="bg-sky-50 text-sky-700 border border-sky-200 text-xs px-2 py-0.5 rounded font-bold">${monthsToGoal} Mos</span>`;
+                    }
+                }
+
+                for (let i = 0; i < 12; i++) {
+                    const monthName = monthsConfig[(currentMonthIdx + i) % 12];
+                    
+                    let monthlyDeposit = 0;
+                    if (i === 0) {
+                        monthlyDeposit = loggedInActiveMonth;
+                    } else if (state.expenses[monthName] && state.expenses[monthName].some(e => e.bucketId == asset.bucketId)) {
+                        monthlyDeposit = state.expenses[monthName]
+                            .filter(exp => exp.bucketId == asset.bucketId && exp.logType === 'transfer')
+                            .reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
+                    } else {
+                        monthlyDeposit = plannedMonthlyTarget;
+                    }
+
+                    runningBalance += monthlyDeposit;
+                    runningBalance += (runningBalance * (rate / 12));
+                    assetTrajectoryData[i] += runningBalance;
+                }
+
+                projectedTotalSavings += runningBalance;
+
+                const forecastCell = document.getElementById(`savings-growth-${asset.id}`);
+                if (forecastCell) {
+                    forecastCell.textContent = `$${runningBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                }
+            });
+
+            if (DOM.textTotalSavings) DOM.textTotalSavings.textContent = `$${currentTotalSavings.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            if (DOM.textProjectedSavings) DOM.textProjectedSavings.textContent = `$${projectedTotalSavings.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+            const netWorthNow = currentTotalSavings - totalNetDebt;
+            if (DOM.textNetworthVal) {
+                DOM.textNetworthVal.textContent = `$${netWorthNow.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                DOM.textNetworthVal.className = netWorthNow >= 0 ? "text-lg font-black text-emerald-600" : "text-lg font-black text-red-600";
+            }
+
+            const monthlyFixedBills = monthBillSum;
+            const runwayMonths = monthlyFixedBills > 0 ? (currentTotalSavings / monthlyFixedBills) : 0;
+            if (DOM.textRunwayMonths) DOM.textRunwayMonths.textContent = `${runwayMonths.toFixed(1)} Months`;
+
+            if (state.activeViewTab === 'savings') {
+                renderSavingsChart(assetTrajectoryLabels, assetTrajectoryData.map(v => parseFloat(v.toFixed(2))));
+            }
+
+            if (state.activeViewTab === 'dashboard') {
+                const dataPoints = [];
+                const netWorthPoints = [];
+                const chartLabels = [];
+                let simulatedBalance = 0; 
+
+                for (let i = 0; i < 12; i++) {
+                    let targetMonthName = monthsConfig[(currentMonthIdx + i) % 12];
+                    chartLabels.push(targetMonthName);
+                    
+                    let localBillsTotal = 0;
+                    state.masterBills.forEach(bill => {
+                        const isCovered = state.coveredBills[targetMonthName]?.[bill.id];
+                        if (!isCovered) {
+                            const override = state.billOverrides[targetMonthName]?.[bill.id];
+                            localBillsTotal += override !== undefined ? parseFloat(override) : parseFloat(bill.amount);
+                        }
+                    });
+
+                    let monthInflowsTotal = (state.inflows[targetMonthName] || []).reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
+                    
+                    simulatedBalance += ((usableFlightIncome + monthInflowsTotal) - localBillsTotal - totalMinAll - totalBucketTargetDollars);
+                    dataPoints.push(parseFloat(simulatedBalance.toFixed(2)));
+
+                    let projectedAssetForMonth = assetTrajectoryData[i] || currentTotalSavings;
+                    let projectedDebtForMonth = debtCurvePoints[i] !== undefined ? debtCurvePoints[i] : totalNetDebt;
+                    netWorthPoints.push(parseFloat((projectedAssetForMonth - projectedDebtForMonth).toFixed(2)));
+                }
+                renderCashflowChartInstance(chartLabels, dataPoints);
+                renderNetWorthChartInstance(chartLabels, netWorthPoints);
+            }
+        }
+
+        // Calendar Renderer
+        function renderCalendarGrid() {
+            if(!DOM.calendarGridContainer) return;
+            DOM.calendarGridContainer.innerHTML = '';
+
+            let activeMonthIdx = monthsConfig.indexOf(state.activeMonth);
+            if (activeMonthIdx < 0) {
+                state.activeMonth = monthsConfig[new Date().getMonth()] || "Aug";
+                activeMonthIdx = monthsConfig.indexOf(state.activeMonth);
+            }
+
+            const currentYear = new Date().getFullYear();
+            const firstDayOfWeek = new Date(currentYear, activeMonthIdx, 1).getDay();
+            const daysInMonth = new Date(currentYear, activeMonthIdx + 1, 0).getDate();
+
+            for(let p = 0; p < firstDayOfWeek; p++) {
+                DOM.calendarGridContainer.innerHTML += `<div class="min-h-[70px] bg-slate-50 border border-slate-100 rounded-lg opacity-40"></div>`;
+            }
+
+            const incomeData = getCalculatedIncome();
+            const advance = parseFloat(state.advancePay) || 0;
+            const trueUp = Math.max(0, incomeData.netFlightPay - advance);
+            const activeTrips = state.trips[state.activeMonth] || [];
+
+            for(let day = 1; day <= daysInMonth; day++) {
+                let dayEventsHtml = '';
+
+                if(day === 5 && advance > 0) {
+                    dayEventsHtml += `<div class="bg-emerald-100 text-emerald-800 text-[10px] font-bold p-1 rounded truncate">+$${advance.toFixed(0)} Advance</div>`;
+                }
+                if(day === 20 && trueUp > 0) {
+                    dayEventsHtml += `<div class="bg-emerald-100 text-emerald-800 text-[10px] font-bold p-1 rounded truncate">+$${trueUp.toFixed(0)} True-Up</div>`;
+                }
+
+                activeTrips.forEach(t => {
+                    if(!t.isDropped && parseInt(t.day, 10) === day) {
+                        const adj = t.adjustments ? ` (+${t.adjustments})` : '';
+                        const totalTfp = (t.baseTfp || 0) + (t.boardingPay || 0) + (t.sitPay || 0) + (t.adjustments || 0);
+                        dayEventsHtml += `<div class="bg-amber-100 text-amber-800 text-[10px] font-bold p-1 rounded truncate">✈️ ${escapeHtml(t.name)} (${totalTfp.toFixed(1)}${adj})</div>`;
+                    }
+                });
+
+                const dayInflows = (state.inflows[state.activeMonth] || []).filter(item => parseInt(item.day, 10) === day);
+                dayInflows.forEach(item => {
+                    dayEventsHtml += `<div class="bg-emerald-100 text-emerald-800 text-[10px] font-bold p-1 rounded truncate">+$${parseFloat(item.amount).toFixed(0)} ${escapeHtml(item.desc)}</div>`;
+                });
+
+                state.debts.forEach(debt => {
+                    if(parseInt(debt.day || 1, 10) === day) {
+                        const isPaid = isDebtPaidStatus(debt, state.activeMonth);
+                        const badgeClass = isPaid ? "bg-slate-100 text-slate-400 line-through" : "bg-red-100 text-red-800";
+                        const checkPrefix = isPaid ? "✓ " : "";
+                        dayEventsHtml += `<div class="${badgeClass} text-[10px] font-bold p-1 rounded truncate">💳 ${checkPrefix}${escapeHtml(debt.name)} ($${parseFloat(debt.min).toFixed(0)})</div>`;
+                    }
+                });
+
+                state.masterBills.forEach(bill => {
+                    const isCovered = state.coveredBills[state.activeMonth]?.[bill.id];
+                    const isPaid = isBillPaidStatus(bill, state.activeMonth);
+                    const override = state.billOverrides[state.activeMonth]?.[bill.id];
+                    const fullAmt = override !== undefined ? parseFloat(override) : parseFloat(bill.amount);
+                    const primaryDueDay = parseInt(bill.day, 10);
+
+                    let badgeClass = "bg-sky-100 text-sky-800";
+                    let splitBadgeClass = "bg-purple-100 text-purple-800";
+
+                    if (isCovered || isPaid) {
+                        badgeClass = "bg-slate-100 text-slate-400 line-through";
+                        splitBadgeClass = "bg-slate-100 text-slate-400 line-through";
+                    }
+
+                    const checkPrefix = isPaid && !isCovered ? "✓ " : "";
+
+                    if(!bill.isSplit) {
+                        if(day === primaryDueDay) {
+                            dayEventsHtml += `<div class="${badgeClass} text-[10px] font-semibold p-1 rounded truncate">${checkPrefix}${escapeHtml(bill.name)} ($${fullAmt.toFixed(0)})</div>`;
+                        }
+                    } else {
+                        const halfAmt = fullAmt / 2;
+                        const p1 = parseInt(bill.pull1, 10) || 5;
+                        const p2 = parseInt(bill.pull2, 10) || 20;
+                        
+                        if(day === p1) {
+                            dayEventsHtml += `<div class="${splitBadgeClass} text-[10px] font-semibold p-1 rounded truncate">${checkPrefix}${escapeHtml(bill.name)} 1/2 ($${halfAmt.toFixed(0)})</div>`;
+                        }
+                        if(day === p2) {
+                            dayEventsHtml += `<div class="${splitBadgeClass} text-[10px] font-semibold p-1 rounded truncate">${checkPrefix}${escapeHtml(bill.name)} 2/2 ($${halfAmt.toFixed(0)})</div>`;
+                        }
+                    }
+                });
+
+                DOM.calendarGridContainer.innerHTML += `
+                    <div class="min-h-[70px] bg-white border border-slate-200 rounded-lg p-1.5 flex flex-col justify-between hover:border-sky-300 transition">
+                        <span class="text-xs font-bold text-slate-400">${day}</span>
+                        <div class="space-y-1 overflow-y-auto max-h-12">${dayEventsHtml}</div>
+                    </div>
+                `;
+            }
+        }
+
+        function renderCashflowChartInstance(labels, data) {
+            const chartCanvas = document.getElementById('chart-cashflow');
+            if(!chartCanvas) return;
+            const ctx = chartCanvas.getContext('2d');
+            if (cashflowChart) cashflowChart.destroy();
+            cashflowChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        borderColor: '#0284c7',
+                        backgroundColor: 'rgba(2, 132, 199, 0.05)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        fill: true,
+                        data: data
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } },
+                        x: { grid: { display: false }, ticks: { font: { size: 11 } } }
+                    }
+                }
+            });
+        }
+
+        function renderNetWorthChartInstance(labels, data) {
+            const chartCanvas = document.getElementById('chart-networth');
+            if(!chartCanvas) return;
+            const ctx = chartCanvas.getContext('2d');
+            if (networthChart) networthChart.destroy();
+            networthChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        borderColor: '#059669',
+                        backgroundColor: 'rgba(5, 150, 105, 0.05)',
+                        borderWidth: 2,
+                        tension: 0.2,
+                        fill: true,
+                        data: data
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } },
+                        x: { grid: { display: false }, ticks: { font: { size: 11 } } }
+                    }
+                }
+            });
+        }
+
+        function renderSavingsChart(labels, data) {
+            const canvas = document.getElementById('chart-savings');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            if (savingsChart) savingsChart.destroy();
+            savingsChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Total Liquid Assets ($)',
+                        data: data,
+                        borderColor: '#059669',
+                        backgroundColor: 'rgba(5, 150, 105, 0.08)',
+                        borderWidth: 2,
+                        tension: 0.2,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } },
+                        x: { grid: { display: false }, ticks: { font: { size: 11 } } }
+                    }
+                }
+            });
+        }
+
+        function renderDebtChart(dataPoints, milestones = []) {
+            const canvas = document.getElementById('chart-debt');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            if (debtChart) debtChart.destroy();
+            
+            const labels = dataPoints.map((_, i) => i === 0 ? 'Now' : `Mo ${i}`);
+
+            const pointRadius = dataPoints.map((_, i) => milestones.some(m => m.monthIndex === i) ? 7 : 2);
+            const pointBgColor = dataPoints.map((_, i) => milestones.some(m => m.monthIndex === i) ? '#10b981' : '#dc2626');
+            const pointBorderColor = dataPoints.map((_, i) => milestones.some(m => m.monthIndex === i) ? '#ffffff' : '#dc2626');
+            const pointBorderWidth = dataPoints.map((_, i) => milestones.some(m => m.monthIndex === i) ? 2 : 1);
+
+            const milestoneLabelPlugin = {
+                id: 'milestoneLabelPlugin',
+                afterDatasetsDraw(chart) {
+                    const { ctx } = chart;
+                    const meta = chart.getDatasetMeta(0);
+
+                    milestones.forEach((m, idx) => {
+                        const pt = meta.data[m.monthIndex];
+                        if (pt) {
+                            ctx.save();
+                            ctx.fillStyle = '#065f46';
+                            ctx.font = 'bold 10px sans-serif';
+                            ctx.textAlign = 'center';
+                            
+                            const yOffset = -12 - ((idx % 2) * 14);
+                            ctx.fillText(`🎉 ${m.debtName} Paid (Mo ${m.actualMonth})`, pt.x, pt.y + yOffset);
+                            ctx.restore();
+                        }
+                    });
+                }
+            };
+
+            debtChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Remaining Debt ($)',
+                        data: dataPoints,
+                        borderColor: '#dc2626',
+                        backgroundColor: 'rgba(220, 38, 38, 0.05)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        fill: true,
+                        pointRadius: pointRadius,
+                        pointBackgroundColor: pointBgColor,
+                        pointBorderColor: pointBorderColor,
+                        pointBorderWidth: pointBorderWidth,
+                        pointHoverRadius: 8
+                    }]
+                },
+                plugins: [milestoneLabelPlugin],
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const idx = context.dataIndex;
+                                    const m = milestones.find(item => item.monthIndex === idx);
+                                    let label = ` Balance: $${context.parsed.y.toLocaleString()}`;
+                                    if (m) label += ` | 🎉 ${m.debtName} Fully Paid Off!`;
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } },
+                        x: { grid: { display: false }, ticks: { font: { size: 11 } } }
+                    }
+                }
+            });
+        }
+
+        function renderSandbox() {
+            if (!DOM.sandboxTripBoard) return;
+            const activeTrips = state.trips[state.activeMonth] || [];
+
+            DOM.sandboxTripBoard.innerHTML = activeTrips.map(trip => {
+                let rate = TFP_RATE_REG;
+                let multLabel = "1.0x (Reg)";
+                let multClass = "bg-slate-100 text-slate-600 border-slate-200";
+                
+                if (trip.multiplier === 1.5) { rate = TFP_RATE_15; multLabel = "1.5x (Prem)"; multClass = "bg-sky-100 text-sky-800 border-sky-200"; }
+                if (trip.multiplier === 2.0) { rate = TFP_RATE_20; multLabel = "2.0x (Crit)"; multClass = "bg-indigo-100 text-indigo-800 border-indigo-200"; }
+
+                const baseTfp = trip.baseTfp || 0;
+                const softTfp = (trip.boardingPay || 0) + (trip.sitPay || 0) + (trip.adjustments || 0);
+                const totalTfp = baseTfp + softTfp;
+
+                const grossBase = baseTfp * rate;
+                const grossSoft = softTfp * TFP_RATE_REG;
+                const net = (grossBase + grossSoft) * (1 - TAX_RATE);
+                
+                const perDiem = (trip.tafb || 0) * PER_DIEM_RATE;
+                const opacity = trip.isDropped ? 'opacity-50 grayscale' : 'opacity-100';
+
+                return `
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative ${opacity} transition-all">
+                        <button onclick="deleteSandboxTrip(${trip.id})" class="absolute top-2 right-2 text-slate-300 hover:text-red-500 font-bold">&times;</button>
+                        <div class="flex justify-between items-center mb-3 pr-4 border-b border-slate-100 pb-2">
+                            <h4 class="font-bold text-slate-800 truncate mr-2">${escapeHtml(trip.name)}</h4>
+                            <span class="text-xs font-semibold text-slate-400 shrink-0">Day ${trip.day}</span>
+                        </div>
+                        
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <div class="text-[11px] font-bold px-1.5 py-0.5 rounded ${multClass} border inline-block mb-1">${multLabel} Base: ${baseTfp.toFixed(1)}</div>
+                                <div class="text-[10px] text-slate-500 font-semibold">+ ${softTfp.toFixed(1)} Soft TFP (1.0x)</div>
+                                <div class="text-sm font-black text-slate-900 mt-1">${totalTfp.toFixed(1)} Total TFP</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-sm font-black text-emerald-600">+$${net.toFixed(2)} <span class="text-[10px] text-slate-400 font-normal">Net</span></div>
+                                <div class="text-[10px] font-bold text-amber-500 mt-0.5">+$${perDiem.toFixed(2)} Per Diem</div>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-2">
+                            <button onclick="toggleDropTrip(${trip.id}, ${!trip.isDropped})" class="flex-1 ${trip.isDropped ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'} text-xs font-bold py-1.5 rounded transition">
+                                ${trip.isDropped ? 'Restore Trip' : 'Drop Trip'}
+                            </button>
+                            <button onclick="addTripAdjustment(${trip.id})" class="flex-1 bg-slate-50 border border-slate-200 text-sky-600 hover:bg-slate-100 text-xs font-bold py-1.5 rounded transition">+ Adj. Soft Pay</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.toggleDropTrip = function(id, dropStatus) {
+            const trip = state.trips[state.activeMonth].find(t => t.id === id);
+            if(trip) trip.isDropped = dropStatus;
+            saveState();
+        };
+
+        window.deleteSandboxTrip = function(id) {
+            if(!confirm("Remove this trip from your schedule?")) return;
+            state.trips[state.activeMonth] = state.trips[state.activeMonth].filter(t => t.id !== id);
+            saveState();
+        };
+
+        window.addTripAdjustment = function(id) {
+            const trip = state.trips[state.activeMonth].find(t => t.id === id);
+            if(!trip) return;
+            const extra = prompt(`Add extra Soft TFP for block delays/strands on ${trip.name}:\n(Enter a negative number to subtract)`, "0");
+            if(extra !== null && !isNaN(parseFloat(extra))) {
+                trip.adjustments = (trip.adjustments || 0) + parseFloat(extra);
+                saveState();
+            }
+        };
+
+        function renderBuckets() {
+            if (!DOM.bucketsContainer) return;
+            DOM.bucketsContainer.innerHTML = '';
+            
+            const incomeData = getCalculatedIncome();
+            const totalIncome = incomeData.netFlightPay;
+
+            state.buckets.forEach((bucket) => {
+                const dollarVal = (totalIncome * (parseFloat(bucket.percentage || 0) / 100)).toFixed(2);
+
+                DOM.bucketsContainer.innerHTML += `
+                    <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm relative group" data-bucket-id="${bucket.id}">
+                        <button onclick="deleteBucket(${bucket.id})" class="absolute top-2 right-2 text-slate-300 hover:text-red-500 font-bold transition text-sm">&times; Remove</button>
+                        <div class="flex justify-between items-center mb-3 pr-16">
+                            <input type="text" value="${escapeHtml(bucket.name)}" 
+                                class="font-semibold text-slate-800 border-b border-transparent hover:border-slate-200 focus:border-sky-500 focus:outline-none bg-transparent py-0.5 w-full text-sm"
+                                onchange="renameBucket(${bucket.id}, this.value)">
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <input type="range" min="0" max="100" step="0.5" value="${bucket.percentage}" class="w-full h-2 bg-slate-200 rounded-lg appearance-none accent-sky-600 bucket-range-input" data-id="${bucket.id}">
+                            
+                            <div class="flex items-center gap-1 w-20 shrink-0">
+                                <input type="number" min="0" max="100" step="0.1" value="${bucket.percentage}" class="w-full text-right border-slate-300 rounded-md p-1 border text-xs focus:ring-1 focus:ring-sky-500 bucket-pct-input" data-id="${bucket.id}">
+                                <span class="text-slate-400 text-xs">%</span>
+                            </div>
+
+                            <div class="flex items-center gap-1 w-24 shrink-0">
+                                <span class="text-slate-400 text-xs">$</span>
+                                <input type="number" min="0" step="1" value="${dollarVal}" class="w-full text-right border-slate-300 rounded-md p-1 border text-xs focus:ring-1 focus:ring-sky-500 bucket-dollar-input" data-id="${bucket.id}">
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            DOM.bucketsContainer.querySelectorAll('.group').forEach(card => {
+                const id = parseInt(card.dataset.bucketId, 10);
+                const rangeInput = card.querySelector('.bucket-range-input');
+                const pctInput = card.querySelector('.bucket-pct-input');
+                const dollarInput = card.querySelector('.bucket-dollar-input');
+
+                if (rangeInput) {
+                    rangeInput.addEventListener('input', (e) => {
+                        const val = parseFloat(e.target.value) || 0;
+                        const b = state.buckets.find(item => item.id === id);
+                        if (b) b.percentage = val;
+
+                        if (pctInput) pctInput.value = val;
+                        const inc = getCalculatedIncome().netFlightPay;
+                        if (dollarInput) dollarInput.value = (inc * (val / 100)).toFixed(2);
+
+                        saveState();
+                    });
+                }
+
+                if (pctInput) {
+                    pctInput.addEventListener('input', (e) => {
+                        const raw = e.target.value;
+                        if (raw === '') return;
+                        
+                        let val = Math.max(0, Math.min(100, parseFloat(raw) || 0));
+                        const b = state.buckets.find(item => item.id === id);
+                        if (b) b.percentage = val;
+
+                        if (rangeInput) rangeInput.value = val;
+                        const inc = getCalculatedIncome().netFlightPay;
+                        if (dollarInput) dollarInput.value = (inc * (val / 100)).toFixed(2);
+
+                        saveState();
+                    });
+                }
+
+                if (dollarInput) {
+                    dollarInput.addEventListener('input', (e) => {
+                        const raw = e.target.value;
+                        if (raw === '') return;
+
+                        const dollarAmt = parseFloat(raw) || 0;
+                        const inc = getCalculatedIncome().netFlightPay;
+                        let calcPct = inc > 0 ? (dollarAmt / inc) * 100 : 0;
+                        calcPct = Math.max(0, Math.min(100, calcPct));
+
+                        const b = state.buckets.find(item => item.id === id);
+                        if (b) b.percentage = parseFloat(calcPct.toFixed(2));
+
+                        if (rangeInput) rangeInput.value = calcPct;
+                        if (pctInput) pctInput.value = calcPct.toFixed(1);
+
+                        saveState();
+                    });
+                }
+            });
+        }
+
+        window.renameBucket = function(id, newName) {
+            if(!newName.trim()) return;
+            state.buckets.find(b => b.id === id).name = newName.trim();
+            syncDropdownOptions();
+            saveState();
+        };
+
+        window.deleteBucket = function(id) {
+            if(state.buckets.length <= 1) {
+                alert("You must maintain at least one allocation bucket baseline target.");
+                return;
+            }
+            if(!confirm("Are you sure you want to delete this allocation bucket?")) return;
+            state.buckets = state.buckets.filter(b => b.id !== id);
+            state.savings.forEach(s => { if(s.bucketId == id) s.bucketId = 'none'; });
+            renderBuckets();
+            syncDropdownOptions();
+            saveState();
+        };
+
+        function renderLists() {
+            const currentMonthInflows = state.inflows[state.activeMonth] || [];
+            if (DOM.listInflows) {
+                DOM.listInflows.innerHTML = currentMonthInflows.map(item => `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-3 font-medium text-slate-900">${escapeHtml(item.desc)}</td>
+                        <td class="p-3 text-center text-xs text-slate-500">Day ${item.day}</td>
+                        <td class="p-3 text-right font-semibold text-emerald-600">+$${parseFloat(item.amount).toFixed(2)}</td>
+                        <td class="p-3 text-center"><button onclick="deleteMonthScopedItem('inflows', ${item.id})" class="text-red-500 hover:text-red-700 font-bold">&times;</button></td>
+                    </tr>
+                `).join('');
+            }
+
+            const currentMonthExpenses = state.expenses[state.activeMonth] || [];
+            if (DOM.listExpenses) {
+                DOM.listExpenses.innerHTML = currentMonthExpenses.map(exp => {
+                    let bName = 'Unlinked';
+                    const isExtraDebt = exp.bucketId && exp.bucketId.toString().startsWith('debt-');
+
+                    if (exp.bucketId === 'general') {
+                        bName = '<span class="text-slate-500 italic">General Spending</span>';
+                    } else if (isExtraDebt) {
+                        const debtId = parseInt(exp.bucketId.replace('debt-', ''), 10);
+                        const targetDebt = state.debts.find(d => d.id === debtId);
+                        bName = `<span class="bg-red-100 text-red-800 px-1.5 py-0.5 rounded font-bold text-[11px]">💳 Extra: ${targetDebt ? escapeHtml(targetDebt.name) : 'Debt'}</span>`;
+                    } else {
+                        const bObj = state.buckets.find(b => b.id == exp.bucketId);
+                        bName = bObj ? escapeHtml(bObj.name) : 'Unlinked';
+                    }
+
+                    const isTransferType = exp.logType === 'transfer' || isExtraDebt;
+                    const logBadge = isTransferType 
+                        ? `<span class="bg-sky-100 text-sky-800 text-[10px] px-1.5 py-0.5 rounded font-bold">Transfer</span>` 
+                        : `<span class="bg-slate-100 text-slate-600 text-[10px] px-1.5 py-0.5 rounded font-medium">Outflow</span>`;
+
+                    return `
+                        <tr class="hover:bg-slate-50">
+                            <td class="p-3 font-medium">${escapeHtml(exp.desc)}</td>
+                            <td class="p-3 text-slate-600 text-xs truncate max-w-[150px]">${bName}</td>
+                            <td class="p-3 text-center">${logBadge}</td>
+                            <td class="p-3 text-right font-semibold text-slate-900">$${parseFloat(exp.amount).toFixed(2)}</td>
+                            <td class="p-3 text-center"><button onclick="deleteMonthScopedItem('expenses', ${exp.id})" class="text-red-500 hover:text-red-700 font-bold">&times;</button></td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            if (DOM.listBills) {
+                DOM.listBills.innerHTML = state.masterBills.map(bill => {
+                    const isCovered = state.coveredBills[state.activeMonth]?.[bill.id] || false;
+                    const isPaid = isBillPaidStatus(bill, state.activeMonth);
+                    const override = state.billOverrides[state.activeMonth]?.[bill.id];
+                    const displayAmt = override !== undefined ? override : bill.amount;
+                    const billCat = bill.category || 'tony';
+
+                    if (editingBillId === bill.id) {
+                        return `
+                            <tr class="bg-sky-50/60 border-2 border-sky-200">
+                                <td class="p-2"><input type="text" id="edit-bill-name-${bill.id}" value="${escapeHtml(bill.name)}" class="w-full border-slate-300 rounded p-1 text-xs border"></td>
+                                <td class="p-2 text-center">
+                                    <select id="edit-bill-cat-${bill.id}" class="border rounded p-1 text-xs border bg-white">
+                                        <option value="tony" ${billCat==='tony'?'selected':''}>👤 Brianna</option>
+                                        <option value="household" ${billCat==='household'?'selected':''}>🏠 HH</option>
+                                    </select>
+                                </td>
+                                <td class="p-2 text-center">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <input type="number" id="edit-bill-day-${bill.id}" value="${bill.day}" min="1" max="31" class="w-12 border-slate-300 rounded p-1 text-xs text-center border">
+                                    </div>
+                                </td>
+                                <td class="p-2 text-center text-xs text-slate-400">Editing...</td>
+                                <td class="p-2 text-center text-xs text-slate-400">Editing...</td>
+                                <td class="p-2 text-right"><input type="number" id="edit-bill-amount-${bill.id}" value="${bill.amount}" step="0.01" class="w-20 border-slate-300 rounded p-1 text-xs text-right border font-bold"></td>
+                                <td class="p-2 text-center">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button onclick="saveBillEdit(${bill.id})" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs font-bold hover:bg-emerald-500 transition">Save</button>
+                                        <button onclick="cancelBillEdit()" class="bg-slate-300 text-slate-700 px-2 py-1 rounded text-xs font-bold hover:bg-slate-400 transition">Cancel</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }
+
+                    let scheduleDisplay = `Due Day ${bill.day}`;
+                    if (bill.isSplit) {
+                        const p1 = bill.pull1 || 5;
+                        const p2 = bill.pull2 || 20;
+                        scheduleDisplay = `<span class="bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded font-bold">Pulls ${p1} & ${p2}</span>`;
+                    }
+
+                    const catBadge = billCat === 'household' ? '<span class="bg-purple-100 text-purple-800 text-[10px] px-1.5 py-0.5 rounded font-bold">🏠 Household</span>' : '<span class="bg-red-100 text-red-800 text-[10px] px-1.5 py-0.5 rounded font-bold">👤 Brianna</span>';
+
+                    return `
+                        <tr class="hover:bg-slate-50 ${isCovered ? 'bg-emerald-50/50' : (isPaid ? 'bg-sky-50/30' : '')}">
+                            <td class="p-3 font-medium ${isCovered ? 'line-through text-slate-400' : ''}">${escapeHtml(bill.name)}</td>
+                            <td class="p-3 text-center">${catBadge}</td>
+                            <td class="p-3 text-center text-xs text-slate-600">${scheduleDisplay}</td>
+                            
+                            <td class="p-3 text-center">
+                                ${isCovered ? '<span class="text-[11px] text-slate-400 font-medium">N/A</span>' : `
+                                    <label class="inline-flex items-center gap-1 cursor-pointer select-none text-xs font-semibold ${isPaid ? 'text-emerald-600' : 'text-amber-600'}">
+                                        <input type="checkbox" ${isPaid ? 'checked' : ''} 
+                                            class="rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                                            onchange="toggleBillPaid(${bill.id}, this.checked)">
+                                        ${isPaid ? 'Paid' : 'Pending'}
+                                    </label>
+                                `}
+                            </td>
+
+                            <td class="p-3 text-center">
+                                <label class="inline-flex items-center gap-1 cursor-pointer select-none text-xs font-semibold ${isCovered ? 'text-emerald-700' : 'text-slate-400'}">
+                                    <input type="checkbox" ${isCovered ? 'checked' : ''} 
+                                        class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                                        onchange="toggleBillCovered(${bill.id}, this.checked)">
+                                    ${isCovered ? 'Covered' : 'Pay'}
+                                </label>
+                            </td>
+
+                            <td class="p-3 text-right">
+                                <div class="flex items-center justify-end gap-1">
+                                    <span class="text-[10px] text-slate-400">${override !== undefined ? '(Edited)' : ''}</span>
+                                    <input type="number" step="0.01" value="${displayAmt}" 
+                                        class="w-20 text-right font-semibold border-b border-transparent hover:border-slate-300 focus:border-sky-500 focus:outline-none p-0 text-sm bg-transparent ${isCovered ? 'line-through text-slate-400' : ''}"
+                                        onchange="updateBillOverride(${bill.id}, this.value)">
+                                </div>
+                            </td>
+                            <td class="p-3 text-center">
+                                <div class="flex items-center justify-center gap-2">
+                                    <button onclick="startBillEdit(${bill.id})" class="text-sky-600 hover:text-sky-800 font-semibold text-xs">Edit</button>
+                                    <button onclick="deleteGlobalItem('masterBills', ${bill.id})" class="text-red-500 hover:text-red-700 font-bold">&times;</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            if (DOM.listDebts) {
+                DOM.listDebts.innerHTML = state.debts.map(debt => {
+                    let loggedExtra = 0;
+                    monthsConfig.forEach(m => {
+                        if (state.expenses[m]) {
+                            loggedExtra += state.expenses[m]
+                                .filter(e => e.bucketId === `debt-${debt.id}`)
+                                .reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+                        }
+                    });
+
+                    const netBal = Math.max(0, parseFloat(debt.balance) - loggedExtra);
+                    const isPaid = isDebtPaidStatus(debt, state.activeMonth);
+
+                    if (editingDebtId === debt.id) {
+                        return `
+                            <tr class="bg-sky-50/60 border-2 border-sky-200">
+                                <td class="p-2"><input type="text" id="edit-debt-name-${debt.id}" value="${escapeHtml(debt.name)}" class="w-full border-slate-300 rounded p-1 text-xs border"></td>
+                                <td class="p-2">
+                                    <select id="edit-debt-type-${debt.id}" class="w-full border-slate-300 rounded p-1 text-xs border bg-white">
+                                        <option value="Credit Card" ${debt.type === 'Credit Card' ? 'selected' : ''}>Credit Card</option>
+                                        <option value="Mortgage" ${debt.type === 'Mortgage' ? 'selected' : ''}>Mortgage</option>
+                                        <option value="Auto Loan" ${debt.type === 'Auto Loan' ? 'selected' : ''}>Auto Loan</option>
+                                        <option value="Student Loan" ${debt.type === 'Student Loan' ? 'selected' : ''}>Student Loan</option>
+                                        <option value="Other" ${debt.type === 'Other' ? 'selected' : ''}>Other</option>
+                                    </select>
+                                </td>
+                                <td class="p-2 text-center"><input type="number" id="edit-debt-day-${debt.id}" value="${debt.day || 1}" min="1" max="31" class="w-14 border-slate-300 rounded p-1 text-xs text-center border"></td>
+                                <td class="p-2 text-center text-xs text-slate-400">Editing...</td>
+                                <td class="p-2 text-right"><input type="number" id="edit-debt-rate-${debt.id}" value="${debt.rate}" step="0.01" class="w-16 border-slate-300 rounded p-1 text-xs text-right border"></td>
+                                <td class="p-2 text-right"><input type="number" id="edit-debt-min-${debt.id}" value="${debt.min}" step="0.01" class="w-20 border-slate-300 rounded p-1 text-xs text-right border"></td>
+                                <td class="p-2 text-right"><input type="number" id="edit-debt-balance-${debt.id}" value="${debt.balance}" step="0.01" class="w-24 border-slate-300 rounded p-1 text-xs text-right border font-bold"></td>
+                                <td class="p-2 text-center text-xs text-slate-400">Editing...</td>
+                                <td class="p-2 text-center text-xs text-slate-400">Editing...</td>
+                                <td class="p-2 text-center">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button onclick="saveDebtEdit(${debt.id})" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs font-bold hover:bg-emerald-500 transition">Save</button>
+                                        <button onclick="cancelDebtEdit()" class="bg-slate-300 text-slate-700 px-2 py-1 rounded text-xs font-bold hover:bg-slate-400 transition">Cancel</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }
+
+                    const reqGross = netBal / (1 - TAX_RATE);
+                    const costRegTfp = Math.ceil(reqGross / TFP_RATE_REG);
+                    const costPremTfp = Math.ceil(reqGross / TFP_RATE_15);
+
+                    return `
+                        <tr class="hover:bg-slate-50 ${isPaid ? 'bg-sky-50/30' : ''}">
+                            <td class="p-3 font-semibold text-slate-900 ${isPaid ? 'line-through text-slate-400' : ''}">${escapeHtml(debt.name)}</td>
+                            <td class="p-3 text-slate-500"><span class="bg-slate-100 px-2 py-0.5 rounded text-xs font-medium">${escapeHtml(debt.type)}</span></td>
+                            <td class="p-3 text-center text-xs text-slate-500">Day ${debt.day || 1}</td>
+                            
+                            <td class="p-3 text-center">
+                                <label class="inline-flex items-center gap-1 cursor-pointer select-none text-xs font-semibold ${isPaid ? 'text-emerald-600' : 'text-amber-600'}">
+                                    <input type="checkbox" ${isPaid ? 'checked' : ''} 
+                                        class="rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                                        onchange="toggleDebtPaid(${debt.id}, this.checked)">
+                                    ${isPaid ? 'Paid' : 'Pending'}
+                                </label>
+                            </td>
+
+                            <td class="p-3 text-right text-slate-600">${parseFloat(debt.rate).toFixed(2)}%</td>
+                            <td class="p-3 text-right text-slate-600 ${isPaid ? 'line-through text-slate-400' : ''}">$${parseFloat(debt.min).toFixed(2)}</td>
+                            <td class="p-3 text-right font-bold text-red-600">
+                                $${netBal.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                ${loggedExtra > 0 ? `<div class="text-[10px] text-emerald-600 font-normal">(-$${loggedExtra.toFixed(2)} Extra Logged)</div>` : ''}
+                            </td>
+                            <td class="p-3 text-center border-x border-sky-100">
+                                <div class="text-[11px] font-black text-slate-700 leading-tight">${costRegTfp} Reg TFP</div>
+                                <div class="text-[10px] font-bold text-sky-600 mt-0.5">or ${costPremTfp} Prem TFP</div>
+                            </td>
+                            <td id="debt-freedom-${debt.id}" class="p-3 text-center font-bold text-slate-700 text-xs">Calculating...</td>
+                            <td class="p-3 text-center">
+                                <div class="flex items-center justify-center gap-2">
+                                    <button onclick="startDebtEdit(${debt.id})" class="text-sky-600 hover:text-sky-800 font-semibold text-xs">Edit</button>
+                                    <button onclick="deleteGlobalItem('debts', ${debt.id})" class="text-red-500 hover:text-red-700 font-bold">&times;</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            if (DOM.listSavings) {
+                DOM.listSavings.innerHTML = state.savings.map(asset => {
+                    if (editingSavingsId === asset.id) {
+                        const isAuto = asset.mode === 'autosync';
+
+                        let bucketOptionsHtml = `<option value="none" ${(!asset.bucketId || asset.bucketId === 'none') ? 'selected' : ''}>None (Pre-Tax / Unlinked)</option>` +
+                            state.buckets.map(b => `<option value="${b.id}" ${asset.bucketId == b.id ? 'selected' : ''}>${escapeHtml(b.name)}</option>`).join('');
+
+                        return `
+                            <tr class="bg-sky-50/60 border-2 border-sky-200">
+                                <td class="p-2">
+                                    <input type="text" id="edit-save-name-${asset.id}" value="${escapeHtml(asset.name)}" placeholder="Name" class="w-full border-slate-300 rounded p-1 text-xs border mb-1">
+                                    <select id="edit-save-mode-${asset.id}" class="w-full border-slate-300 rounded p-1 text-xs border bg-white mb-1" onchange="toggleEditAssetModeUI(${asset.id}, this.value)">
+                                        <option value="manual" ${!isAuto ? 'selected' : ''}>Manual Balance</option>
+                                        <option value="autosync" ${isAuto ? 'selected' : ''}>Auto-Sync Ticker</option>
+                                    </select>
+                                    <div id="edit-save-manual-container-${asset.id}" class="${isAuto ? 'hidden' : ''}">
+                                        <input type="number" id="edit-save-bal-${asset.id}" value="${asset.balance || 0}" step="0.01" placeholder="Balance ($)" class="w-full border-slate-300 rounded p-1 text-xs border font-bold">
+                                    </div>
+                                    <div id="edit-save-auto-container-${asset.id}" class="${isAuto ? '' : 'hidden'} space-y-1">
+                                        <input type="text" id="edit-save-ticker-${asset.id}" value="${escapeHtml(asset.ticker || '')}" placeholder="Ticker (e.g. FXAIX)" class="w-full border-slate-300 rounded p-1 text-xs border uppercase font-bold text-sky-600">
+                                        <input type="number" id="edit-save-shares-${asset.id}" value="${asset.shares || ''}" step="0.0001" placeholder="Shares" class="w-full border-slate-300 rounded p-1 text-xs border">
+                                        <input type="number" id="edit-save-basis-${asset.id}" value="${asset.costBasis || ''}" step="0.01" placeholder="Cost Basis ($)" class="w-full border-slate-300 rounded p-1 text-xs border">
+                                    </div>
+                                </td>
+                                <td class="p-2">
+                                    <select id="edit-save-bucket-${asset.id}" class="w-full border-slate-300 rounded p-1 text-xs border bg-white">
+                                        ${bucketOptionsHtml}
+                                    </select>
+                                </td>
+                                <td class="p-2 text-right">
+                                    <input type="number" id="edit-save-yield-${asset.id}" value="${asset.yield || 0}" step="0.01" class="w-16 border-slate-300 rounded p-1 text-xs text-right border">
+                                </td>
+                                <td class="p-2 text-right font-bold text-xs text-slate-400">Calculated</td>
+                                <td class="p-2 text-center">
+                                    <input type="number" id="edit-save-target-${asset.id}" value="${asset.target || 0}" step="0.01" class="w-24 border-slate-300 rounded p-1 text-xs text-center border">
+                                </td>
+                                <td class="p-2 text-center text-xs text-slate-400">Editing...</td>
+                                <td class="p-2 text-center text-xs text-slate-400">Editing...</td>
+                                <td class="p-2 text-center text-xs text-slate-400">Editing...</td>
+                                <td class="p-2 text-center text-xs text-slate-400">Editing...</td>
+                                <td class="p-2 text-center">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button onclick="saveSavingsEdit(${asset.id})" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs font-bold hover:bg-emerald-500 transition">Save</button>
+                                        <button onclick="cancelSavingsEdit()" class="bg-slate-300 text-slate-700 px-2 py-1 rounded text-xs font-bold hover:bg-slate-400 transition">Cancel</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }
+
+                    let bName = '<span class="text-slate-400 italic">Pre-Tax / Unlinked</span>';
+                    if (asset.bucketId && asset.bucketId !== 'none') {
+                        const found = state.buckets.find(b => b.id == asset.bucketId);
+                        if (found) bName = escapeHtml(found.name);
+                    }
+
+                    let loggedDepositsAllMonths = 0;
+                    if (asset.bucketId && asset.bucketId !== 'none') {
+                        monthsConfig.forEach(m => {
+                            if (state.expenses[m]) {
+                                loggedDepositsAllMonths += state.expenses[m]
+                                    .filter(exp => exp.bucketId == asset.bucketId && exp.logType === 'transfer')
+                                    .reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
+                            }
+                        });
+                    }
+
+                    const netCurBal = parseFloat(asset.balance || 0) + loggedDepositsAllMonths;
+                    const targetGoal = parseFloat(asset.target || 0);
+                    const pctGoal = targetGoal > 0 ? Math.min(100, (netCurBal / targetGoal) * 100) : 100;
+
+                    let nameDisplay = `<span class="font-bold text-slate-900">${escapeHtml(asset.name)}</span>`;
+                    let marketDisplay = `<span class="text-xs text-slate-400 font-medium">Fixed / Cash</span>`;
+
+                    if (asset.mode === 'autosync' && asset.ticker) {
+                        nameDisplay += `<div class="text-xs text-sky-600 font-bold mt-0.5">${escapeHtml(asset.ticker.toUpperCase())} (${parseFloat(asset.shares || 0).toFixed(2)} sh)</div>`;
+                        
+                        const costBasis = parseFloat(asset.costBasis || 0) * parseFloat(asset.shares || 0);
+                        const gainDollars = netCurBal - costBasis;
+                        const gainPct = costBasis > 0 ? (gainDollars / costBasis) * 100 : 0;
+                        
+                        if (gainDollars >= 0) {
+                            marketDisplay = `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2 py-0.5 rounded font-bold">+$${gainDollars.toFixed(2)} (+${gainPct.toFixed(1)}%)</span>`;
+                        } else {
+                            marketDisplay = `<span class="bg-red-100 text-red-800 text-[11px] px-2 py-0.5 rounded font-bold">-$${Math.abs(gainDollars).toFixed(2)} (${gainPct.toFixed(1)}%)</span>`;
+                        }
+
+                        if (asset.livePrice) {
+                            marketDisplay += `<div class="text-[10px] text-slate-400 mt-0.5">Live Price: $${asset.livePrice.toFixed(2)} ${asset.lastUpdated ? '('+asset.lastUpdated+')' : ''}</div>`;
+                        }
+                    }
+
+                    return `
+                        <tr class="hover:bg-slate-50">
+                            <td class="p-3">${nameDisplay}</td>
+                            <td class="p-3 text-slate-500 text-xs font-medium">${bName}</td>
+                            <td class="p-3 text-right font-semibold text-emerald-600">${parseFloat(asset.yield).toFixed(2)}%</td>
+                            <td class="p-3 text-right font-bold text-slate-900">
+                                $${netCurBal.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                ${loggedDepositsAllMonths > 0 ? `<div class="text-[10px] text-emerald-600 font-normal">(+$${loggedDepositsAllMonths.toFixed(2)} Logged Deposits)</div>` : ''}
+                            </td>
+                            <td class="p-3 text-center">
+                                <div class="text-xs font-medium text-slate-600 mb-1">$${netCurBal.toLocaleString()} / $${targetGoal.toLocaleString()} (${pctGoal.toFixed(0)}%)</div>
+                                <div class="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                                    <div class="bg-sky-600 h-1.5 rounded-full" style="width: ${pctGoal}%"></div>
+                                </div>
+                            </td>
+                            <td id="savings-lag-${asset.id}" class="p-3 text-center font-bold text-xs">Calculating...</td>
+                            <td id="savings-months-goal-${asset.id}" class="p-3 text-center text-xs font-bold">Calculating...</td>
+                            <td class="p-3 text-center">${marketDisplay}</td>
+                            <td id="savings-growth-${asset.id}" class="p-3 text-center font-bold text-sky-600">Calculating...</td>
+                            <td class="p-3 text-center">
+                                <div class="flex items-center justify-center gap-2">
+                                    <button onclick="startSavingsEdit(${asset.id})" class="text-sky-600 hover:text-sky-800 font-semibold text-xs">Edit</button>
+                                    <button onclick="deleteGlobalItem('savings', ${asset.id})" class="text-red-500 hover:text-red-700 font-bold">&times;</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        window.toggleDebtPaid = function(debtId, isChecked) {
+            if (!state.debtPaidOverrides[state.activeMonth]) {
+                state.debtPaidOverrides[state.activeMonth] = {};
+            }
+            state.debtPaidOverrides[state.activeMonth][debtId] = isChecked;
+            saveState();
+        };
+
+        window.startSavingsEdit = function(id) {
+            editingSavingsId = id;
+            saveState();
+        };
+
+        window.cancelSavingsEdit = function() {
+            editingSavingsId = null;
+            saveState();
+        };
+
+        window.toggleEditAssetModeUI = function(id, mode) {
+            const manContainer = document.getElementById(`edit-save-manual-container-${id}`);
+            const autoContainer = document.getElementById(`edit-save-auto-container-${id}`);
+            if (manContainer && autoContainer) {
+                if (mode === 'autosync') {
+                    manContainer.classList.add('hidden');
+                    autoContainer.classList.remove('hidden');
+                } else {
+                    manContainer.classList.remove('hidden');
+                    autoContainer.classList.add('hidden');
+                }
+            }
+        };
+
+        window.saveSavingsEdit = function(id) {
+            const targetAsset = state.savings.find(s => s.id === id);
+            if (!targetAsset) return;
+
+            const mode = document.getElementById(`edit-save-mode-${id}`).value;
+            targetAsset.name = document.getElementById(`edit-save-name-${id}`).value || targetAsset.name;
+            targetAsset.bucketId = document.getElementById(`edit-save-bucket-${id}`).value;
+            targetAsset.mode = mode;
+            targetAsset.yield = parseFloat(document.getElementById(`edit-save-yield-${id}`).value) || 0;
+            targetAsset.target = parseFloat(document.getElementById(`edit-save-target-${id}`).value) || 0;
+
+            if (mode === 'autosync') {
+                targetAsset.ticker = document.getElementById(`edit-save-ticker-${id}`).value.trim().toUpperCase();
+                targetAsset.shares = parseFloat(document.getElementById(`edit-save-shares-${id}`).value) || 0;
+                targetAsset.costBasis = parseFloat(document.getElementById(`edit-save-basis-${id}`).value) || 0;
+                if (targetAsset.livePrice) {
+                    targetAsset.balance = parseFloat((targetAsset.shares * targetAsset.livePrice).toFixed(2));
+                } else {
+                    targetAsset.balance = parseFloat((targetAsset.shares * targetAsset.costBasis).toFixed(2));
+                }
+            } else {
+                targetAsset.balance = parseFloat(document.getElementById(`edit-save-bal-${id}`).value) || 0;
+                targetAsset.ticker = '';
+                targetAsset.shares = 0;
+                targetAsset.costBasis = 0;
+            }
+
+            editingSavingsId = null;
+            saveState();
+
+            if (mode === 'autosync') {
+                refreshFinnhubPrices();
+            }
+        };
+
+        window.startBillEdit = function(id) {
+            editingBillId = id;
+            saveState();
+        };
+
+        window.cancelBillEdit = function() {
+            editingBillId = null;
+            saveState();
+        };
+
+        window.toggleEditSplitUI = function(id, isChecked) {
+            const splitContainer = document.getElementById(`edit-split-inputs-${id}`);
+            if (splitContainer) {
+                if (isChecked) splitContainer.classList.remove('hidden');
+                else splitContainer.classList.add('hidden');
+            }
+        };
+
+        window.saveBillEdit = function(id) {
+            const targetBill = state.masterBills.find(b => b.id === id);
+            if (!targetBill) return;
+
+            const dueDay = parseInt(document.getElementById(`edit-bill-day-${id}`).value, 10) || 1;
+            const catSelect = document.getElementById(`edit-bill-cat-${id}`);
+
+            targetBill.name = document.getElementById(`edit-bill-name-${id}`).value || targetBill.name;
+            targetBill.amount = parseFloat(document.getElementById(`edit-bill-amount-${id}`).value) || 0;
+            targetBill.day = dueDay;
+            targetBill.category = catSelect ? catSelect.value : 'tony';
+
+            editingBillId = null;
+            saveState();
+        };
+
+        window.startDebtEdit = function(id) {
+            editingDebtId = id;
+            saveState();
+        };
+
+        window.cancelDebtEdit = function() {
+            editingDebtId = null;
+            saveState();
+        };
+
+        window.saveDebtEdit = function(id) {
+            const targetDebt = state.debts.find(d => d.id === id);
+            if (!targetDebt) return;
+
+            targetDebt.name = document.getElementById(`edit-debt-name-${id}`).value || targetDebt.name;
+            targetDebt.type = document.getElementById(`edit-debt-type-${id}`).value || targetDebt.type;
+            targetDebt.day = parseInt(document.getElementById(`edit-debt-day-${id}`).value, 10) || 1;
+            targetDebt.rate = parseFloat(document.getElementById(`edit-debt-rate-${id}`).value) || 0;
+            targetDebt.min = parseFloat(document.getElementById(`edit-debt-min-${id}`).value) || 0;
+            targetDebt.balance = parseFloat(document.getElementById(`edit-debt-balance-${id}`).value) || 0;
+
+            editingDebtId = null;
+            saveState();
+        };
+
+        window.toggleBillPaid = function(billId, isChecked) {
+            if (!state.billPaidOverrides[state.activeMonth]) {
+                state.billPaidOverrides[state.activeMonth] = {};
+            }
+            state.billPaidOverrides[state.activeMonth][billId] = isChecked;
+            saveState();
+        };
+
+        window.toggleBillCovered = function(billId, isChecked) {
+            if (!state.coveredBills[state.activeMonth]) {
+                state.coveredBills[state.activeMonth] = {};
+            }
+            state.coveredBills[state.activeMonth][billId] = isChecked;
+            saveState();
+        };
+
+        window.updateBillOverride = function(billId, value) {
+            if (value === '' || parseFloat(value) < 0) return;
+            state.billOverrides[state.activeMonth][billId] = parseFloat(value);
+            saveState();
+        };
+
+        window.deleteMonthScopedItem = function(type, id) {
+            if(!confirm("Delete this entry?")) return;
+            state[type][state.activeMonth] = state[type][state.activeMonth].filter(item => item.id !== id);
+            saveState();
+        };
+
+        window.deleteGlobalItem = function(type, id) {
+            if(!confirm("Are you sure you want to remove this account?")) return;
+            state[type] = state[type].filter(item => item.id !== id);
+            syncDropdownOptions();
+            saveState();
+        };
+
+        // Dual .ics export implementation for Home Assistant integration (9am to 5pm Central Time)
+        function generateIcsCalendar(categoryFilter = null) {
+            const currentYear = new Date().getFullYear();
+            const activeMonthIdx = monthsConfig.indexOf(state.activeMonth);
+            const incomeData = getCalculatedIncome();
+            
+            let icsContent = [
+                "BEGIN:VCALENDAR",
+                "VERSION:2.0",
+                "PRODID:-//Finance Dashboard Command Center//EN",
+                "CALSCALE:GREGORIAN"
+            ];
+
+            const formatIcsTimestamp = (year, monthIdx, day, hour) => {
+                const y = year.toString();
+                const m = String(monthIdx + 1).padStart(2, '0');
+                const d = String(day).padStart(2, '0');
+                const h = String(hour).padStart(2, '0');
+                return `${y}${m}${d}T${h}0000Z`;
+            };
+
+            if (!categoryFilter || categoryFilter === 'tony') {
+                const advance = parseFloat(state.advancePay) || 0;
+                const trueUp = Math.max(0, incomeData.netFlightPay - advance);
+
+                icsContent.push("BEGIN:VEVENT", `SUMMARY:💰 5th Advance Paycheck ($${advance.toFixed(2)})`, `DTSTART:${formatIcsTimestamp(currentYear, activeMonthIdx, 5, 14)}`, `DTEND:${formatIcsTimestamp(currentYear, activeMonthIdx, 5, 22)}`, "END:VEVENT");
+                icsContent.push("BEGIN:VEVENT", `SUMMARY:💰 20th True-Up Check ($${trueUp.toFixed(2)})`, `DTSTART:${formatIcsTimestamp(currentYear, activeMonthIdx, 20, 14)}`, `DTEND:${formatIcsTimestamp(currentYear, activeMonthIdx, 20, 22)}`, "END:VEVENT");
+
+                const activeTrips = state.trips[state.activeMonth] || [];
+                activeTrips.forEach(t => {
+                    if(!t.isDropped) {
+                        const day = parseInt(t.day, 10);
+                        icsContent.push("BEGIN:VEVENT", `SUMMARY:✈️ Trip: ${t.name}`, `DTSTART:${formatIcsTimestamp(currentYear, activeMonthIdx, day, 14)}`, `DTEND:${formatIcsTimestamp(currentYear, activeMonthIdx, day, 22)}`, "END:VEVENT");
+                    }
+                });
+
+                state.debts.forEach(debt => {
+                    const day = parseInt(debt.day || 1, 10);
+                    icsContent.push("BEGIN:VEVENT", `SUMMARY:💳 Debt Due: ${debt.name} ($${debt.min})`, `DTSTART:${formatIcsTimestamp(currentYear, activeMonthIdx, day, 14)}`, `DTEND:${formatIcsTimestamp(currentYear, activeMonthIdx, day, 22)}`, "END:VEVENT");
+                });
+            }
+
+            state.masterBills.forEach(bill => {
+                const billCat = bill.category || 'tony';
+                if (categoryFilter && billCat !== categoryFilter) return;
+
+                const isCovered = state.coveredBills[state.activeMonth]?.[bill.id];
+                if (isCovered) return;
+
+                const override = state.billOverrides[state.activeMonth]?.[bill.id];
+                const fullAmt = override !== undefined ? parseFloat(override) : parseFloat(bill.amount);
+                const primaryDay = parseInt(bill.day, 10);
+                const prefix = billCat === 'household' ? '🏠 ' : '💳 ';
+
+                if (!bill.isSplit) {
+                    icsContent.push("BEGIN:VEVENT", `SUMMARY:${prefix}Bill Due: ${bill.name} ($${fullAmt})`, `DTSTART:${formatIcsTimestamp(currentYear, activeMonthIdx, primaryDay, 14)}`, `DTEND:${formatIcsTimestamp(currentYear, activeMonthIdx, primaryDay, 22)}`, "END:VEVENT");
+                } else {
+                    const halfAmt = fullAmt / 2;
+                    const p1 = parseInt(bill.pull1, 10) || 5;
+                    const p2 = parseInt(bill.pull2, 10) || 20;
+
+                    icsContent.push("BEGIN:VEVENT", `SUMMARY:${prefix}Split Withdrawal (1/2): ${bill.name} ($${halfAmt})`, `DTSTART:${formatIcsTimestamp(currentYear, activeMonthIdx, p1, 14)}`, `DTEND:${formatIcsTimestamp(currentYear, activeMonthIdx, p1, 22)}`, "END:VEVENT");
+                    icsContent.push("BEGIN:VEVENT", `SUMMARY:${prefix}Split Withdrawal (2/2): ${bill.name} ($${halfAmt})`, `DTSTART:${formatIcsTimestamp(currentYear, activeMonthIdx, p2, 14)}`, `DTEND:${formatIcsTimestamp(currentYear, activeMonthIdx, p2, 22)}`, "END:VEVENT");
+                }
+            });
+
+            icsContent.push("END:VCALENDAR");
+
+            const blob = new Blob([icsContent.join("\r\n")], { type: 'text/calendar;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = window.URL.createObjectURL(blob);
+            link.download = categoryFilter === 'household' ? `household-bills-${state.activeMonth}.ics` : `brianna-bills-${state.activeMonth}.ics`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function setupEventListeners() {
+            if (DOM.btnAddBucket) {
+                DOM.btnAddBucket.onclick = () => {
+                    const nextNum = state.buckets.length + 1;
+                    const nextId = Date.now();
+                    state.buckets.push({ id: nextId, name: `New Category ${nextNum}`, percentage: 0 });
+                    saveState();
+                    renderBuckets();
+                    syncDropdownOptions();
+                };
+            }
+
+            if (DOM.billSplitCheck) {
+                DOM.billSplitCheck.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        if (DOM.splitDaysContainer) DOM.splitDaysContainer.classList.remove('hidden');
+                    } else {
+                        if (DOM.splitDaysContainer) DOM.splitDaysContainer.classList.add('hidden');
+                    }
+                });
+            }
+
+            if (DOM.inputAdvancePay) {
+                DOM.inputAdvancePay.addEventListener('input', (e) => {
+                    state.advancePay = parseFloat(e.target.value) || 0;
+                    if (DOM.sandboxAdvance) DOM.sandboxAdvance.value = state.advancePay;
+                    saveState();
+                });
+            }
+
+            if (DOM.sandboxAdvance) {
+                DOM.sandboxAdvance.addEventListener('input', (e) => {
+                    state.advancePay = parseFloat(e.target.value) || 0;
+                    if (DOM.inputAdvancePay) DOM.inputAdvancePay.value = state.advancePay;
+                    saveState();
+                });
+            }
+
+            if (DOM.formSandboxTrip) {
+                DOM.formSandboxTrip.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    state.trips[state.activeMonth].push({
+                        id: Date.now(),
+                        name: document.getElementById('sandbox-trip-name').value,
+                        day: parseInt(document.getElementById('sandbox-trip-day').value, 10) || 1,
+                        baseTfp: parseFloat(document.getElementById('sandbox-trip-base').value) || 0,
+                        boardingPay: parseFloat(document.getElementById('sandbox-trip-boarding').value) || 0,
+                        sitPay: parseFloat(document.getElementById('sandbox-trip-sit').value) || 0,
+                        multiplier: parseFloat(document.getElementById('sandbox-trip-mult').value) || 1,
+                        tafb: parseTimeInput(document.getElementById('sandbox-trip-tafb').value),
+                        isDropped: false,
+                        adjustments: 0
+                    });
+                    e.target.reset();
+                    saveState();
+                });
+            }
+
+            if (DOM.estBase) DOM.estBase.addEventListener('input', calculateTripEstimator);
+            if (DOM.estBoarding) DOM.estBoarding.addEventListener('input', calculateTripEstimator);
+            if (DOM.estSit) DOM.estSit.addEventListener('input', calculateTripEstimator);
+            if (DOM.estMult) DOM.estMult.addEventListener('change', calculateTripEstimator);
+            if (DOM.estTafb) DOM.estTafb.addEventListener('input', calculateTripEstimator);
+
+            if (DOM.stratSnowball) DOM.stratSnowball.addEventListener('click', () => { state.debtStrategy = 'snowball'; toggleStrategyUI(); saveState(); });
+            if (DOM.stratAvalanche) DOM.stratAvalanche.addEventListener('click', () => { state.debtStrategy = 'avalanche'; toggleStrategyUI(); saveState(); });
+
+            if (DOM.inputFinnhubKey) {
+                DOM.inputFinnhubKey.addEventListener('change', (e) => {
+                    state.finnhubKey = e.target.value.trim();
+                    saveState();
+                });
+            }
+
+            if (DOM.btnSyncPrices) DOM.btnSyncPrices.addEventListener('click', refreshFinnhubPrices);
+
+            if (DOM.formInflow) {
+                DOM.formInflow.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    state.inflows[state.activeMonth].push({
+                        id: Date.now(),
+                        desc: document.getElementById('inflow-desc').value,
+                        amount: parseFloat(document.getElementById('inflow-amount').value) || 0,
+                        day: parseInt(document.getElementById('inflow-day').value, 10) || 1
+                    });
+                    e.target.reset(); saveState();
+                });
+            }
+
+            if (DOM.formExpense) {
+                DOM.formExpense.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    state.expenses[state.activeMonth].push({
+                        id: Date.now(),
+                        desc: document.getElementById('exp-desc').value,
+                        bucketId: DOM.expBucketDropdown.value,
+                        logType: DOM.expTypeSelect.value,
+                        amount: parseFloat(document.getElementById('exp-amount').value) || 0
+                    });
+                    e.target.reset(); saveState();
+                });
+            }
+
+            if (DOM.formBill) {
+                DOM.formBill.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const isSplit = DOM.billSplitCheck ? DOM.billSplitCheck.checked : false;
+                    const dueDay = parseInt(document.getElementById('bill-day').value, 10) || 1;
+                    const categorySelect = document.getElementById('bill-category');
+
+                    state.masterBills.push({
+                        id: Date.now(),
+                        name: document.getElementById('bill-name').value,
+                        amount: parseFloat(document.getElementById('bill-amount').value) || 0,
+                        day: dueDay,
+                        isSplit: isSplit,
+                        pull1: isSplit ? (parseInt(DOM.billPull1Input.value, 10) || 5) : dueDay,
+                        pull2: isSplit ? (parseInt(DOM.billPull2Input.value, 10) || 20) : null,
+                        category: categorySelect ? categorySelect.value : 'tony'
+                    });
+
+                    e.target.reset(); 
+                    if (DOM.splitDaysContainer) DOM.splitDaysContainer.classList.add('hidden');
+                    saveState();
+                });
+            }
+
+            if (DOM.formDebt) {
+                DOM.formDebt.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    state.debts.push({
+                        id: Date.now(),
+                        name: document.getElementById('debt-name').value,
+                        type: document.getElementById('debt-type').value,
+                        balance: parseFloat(document.getElementById('debt-balance').value) || 0,
+                        rate: parseFloat(document.getElementById('debt-rate').value) || 0,
+                        min: parseFloat(document.getElementById('debt-min').value) || 0,
+                        day: parseInt(document.getElementById('debt-day').value, 10) || 1
+                    });
+                    e.target.reset(); 
+                    syncDropdownOptions();
+                    saveState();
+                });
+            }
+
+            if (DOM.formSavings) {
+                DOM.formSavings.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const mode = document.getElementById('save-mode').value;
+                    const initialShares = parseFloat(document.getElementById('save-shares').value) || 0;
+                    const initialBasis = parseFloat(document.getElementById('save-costbasis').value) || 0;
+                    const manualBal = parseFloat(document.getElementById('save-balance').value) || (initialShares * initialBasis);
+
+                    state.savings.push({
+                        id: Date.now(),
+                        name: document.getElementById('save-name').value,
+                        bucketId: DOM.saveBucketDropdown.value,
+                        mode: mode,
+                        balance: manualBal,
+                        ticker: mode === 'autosync' ? document.getElementById('save-ticker').value.trim().toUpperCase() : '',
+                        shares: initialShares,
+                        costBasis: initialBasis,
+                        target: parseFloat(document.getElementById('save-target').value) || 0,
+                        yield: parseFloat(document.getElementById('save-yield').value) || 0
+                    });
+                    
+                    e.target.reset();
+                    toggleAssetModeUI('manual');
+                    saveState();
+
+                    if (mode === 'autosync') {
+                        refreshFinnhubPrices();
+                    }
+                });
+            }
+
+            const btnTonyIcs = document.getElementById('btn-export-tony-ics');
+            const btnHhIcs = document.getElementById('btn-export-hh-ics');
+            if (btnTonyIcs) btnTonyIcs.addEventListener('click', () => generateIcsCalendar('tony'));
+            if (btnHhIcs) btnHhIcs.addEventListener('click', () => generateIcsCalendar('household'));
+
+            if (DOM.btnExport) {
+                DOM.btnExport.addEventListener('click', () => {
+                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+                    const anchor = document.createElement('a');
+                    anchor.href = dataStr;
+                    anchor.download = "brianna-command-center-backup.json";
+                    document.body.appendChild(anchor);
+                    anchor.click();
+                    anchor.remove();
+                });
+            }
+
+            if (DOM.btnImport) {
+                DOM.btnImport.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        try {
+                            const importedState = JSON.parse(event.target.result);
+                            if (importedState && importedState.buckets) {
+                                state = importedState;
+                                normalizeStateSchema(state);
+                                init();
+                                saveState();
+                            }
+                        } catch (err) { alert("Error reading JSON file."); }
+                    };
+                    reader.readAsText(file);
+                });
+            }
+        }
+
+        // Initialize on DOM Ready
+        document.addEventListener('DOMContentLoaded', () => {
+            init();
+        });
+    </script>
+</body>
+</html>
