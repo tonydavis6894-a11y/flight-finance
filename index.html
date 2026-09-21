@@ -60,16 +60,20 @@
                 </div>
                 <div class="flex flex-col justify-center gap-2 w-full lg:w-auto mt-4 sm:mt-0">
                     <div class="flex justify-between gap-4">
-                        <span class="text-slate-400">Total Net Flight Pay</span>
+                        <span class="text-slate-400">Gross Flight Pay</span>
+                        <span id="summary-gross-val" class="font-bold text-slate-300">$0.00</span>
+                    </div>
+                    <div class="flex justify-between gap-4 border-b border-slate-700 pb-1.5 mb-0.5">
+                        <span class="text-slate-400">Est. Taxes/Deductions (23%)</span>
+                        <span id="summary-deductions-val" class="font-bold text-red-300">-$0.00</span>
+                    </div>
+                    <div class="flex justify-between gap-4">
+                        <span class="text-slate-400">Net Flight Pay</span>
                         <span id="summary-income-val" class="font-bold text-emerald-400">$0.00</span>
                     </div>
-                    <div class="flex justify-between gap-4 border-b border-slate-700 pb-1.5">
-                        <span class="text-slate-400">Est. Taxes & Union Dues (23%)</span>
-                        <span id="summary-deductions-val" class="font-bold text-slate-300">-$0.00</span>
-                    </div>
-                    <div class="flex justify-between gap-4 pt-0.5">
+                    <div class="flex justify-between gap-4 pt-1 mt-0.5 border-t border-slate-800">
                         <span class="text-slate-400">Total Outflows (Bills, Debt, Buckets)</span>
-                        <span id="summary-outflow-val" class="font-bold text-red-400">$0.00</span>
+                        <span id="summary-outflow-val" class="font-bold text-amber-400">-$0.00</span>
                     </div>
                 </div>
             </div>
@@ -107,19 +111,27 @@
                                 <input type="number" id="sandbox-trip-day" min="1" max="31" required class="w-full border-slate-300 rounded-md p-2 border text-sm focus:ring-2 focus:ring-sky-500" placeholder="12">
                             </div>
                             <div>
-                                <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Multiplier (Base Only)</label>
-                                <select id="sandbox-trip-mult" class="w-full border-slate-300 rounded-md p-2 border text-sm font-semibold focus:ring-2 focus:ring-sky-500 bg-white">
-                                    <option value="1">1.0x (Reg)</option>
-                                    <option value="1.5">1.5x (Prem)</option>
-                                    <option value="2">2.0x (Crit)</option>
+                                <label class="block text-[11px] font-bold text-purple-600 uppercase mb-1">Pays In Month</label>
+                                <select id="sandbox-trip-paymonth" class="w-full border-purple-200 rounded-md p-2 border text-sm font-semibold focus:ring-2 focus:ring-purple-500 bg-purple-50">
+                                    <!-- Populated dynamically -->
                                 </select>
                             </div>
                         </div>
 
-                        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-3">
-                            <div>
-                                <label class="block text-[11px] font-bold text-sky-700 uppercase mb-1">Base TFP (Flight Time)</label>
-                                <input type="number" id="sandbox-trip-base" min="0" step="0.1" required class="w-full bg-white border-slate-300 rounded-md p-1.5 border text-sm font-bold focus:ring-2 focus:ring-sky-500" placeholder="20.4">
+                        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-3 mt-2">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-[11px] font-bold text-sky-700 uppercase mb-1">Base TFP</label>
+                                    <input type="number" id="sandbox-trip-base" min="0" step="0.1" required class="w-full bg-white border-slate-300 rounded-md p-1.5 border text-sm font-bold focus:ring-2 focus:ring-sky-500" placeholder="20.4">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Multiplier</label>
+                                    <select id="sandbox-trip-mult" class="w-full border-slate-300 rounded-md p-1.5 border text-xs font-semibold focus:ring-2 focus:ring-sky-500 bg-white">
+                                        <option value="1">1.0x (Reg)</option>
+                                        <option value="1.5">1.5x (Prem)</option>
+                                        <option value="2">2.0x (Crit)</option>
+                                    </select>
+                                </div>
                             </div>
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
@@ -134,7 +146,7 @@
                         </div>
 
                         <div>
-                            <label class="block text-[11px] font-bold text-amber-600 uppercase mb-1">TAFB (Use HH:MM or Decimals)</label>
+                            <label class="block text-[11px] font-bold text-amber-600 uppercase mb-1 mt-1">TAFB (Use HH:MM or Decimals)</label>
                             <input type="text" id="sandbox-trip-tafb" required class="w-full border-amber-200 bg-amber-50 rounded-md p-2 border text-sm focus:ring-2 focus:ring-amber-500" placeholder="e.g. 61:22">
                         </div>
                         <button type="submit" class="w-full bg-sky-600 text-white px-4 py-2.5 rounded-md hover:bg-sky-500 transition text-sm font-bold mt-2 shadow-sm">+ Add Trip to Schedule</button>
@@ -160,7 +172,7 @@
                         </div>
                     </div>
 
-                    <div id="sandbox-trip-board" class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto pr-2 pb-4">
+                    <div id="sandbox-trip-board" class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto pr-2 pb-4 pt-2">
                         <!-- Trips render here -->
                     </div>
                 </section>
@@ -180,7 +192,7 @@
                     
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
                         <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 text-center">
-                            <div class="text-[11px] font-bold text-slate-500 uppercase mb-1">Scheduled TFP</div>
+                            <div class="text-[11px] font-bold text-slate-500 uppercase mb-1">Total Payload TFP</div>
                             <div id="dash-total-tfp" class="text-2xl font-black text-slate-800">0.0</div>
                         </div>
                         <div class="bg-emerald-50 p-4 rounded-lg border border-emerald-100 text-center">
@@ -207,10 +219,7 @@
                         
                         <div class="text-center bg-slate-900/40 border border-sky-700 rounded-xl p-4 mb-3 z-10">
                             <div id="target-tfp-reg" class="text-4xl font-black text-white">0</div>
-                            <div class="text-xs font-semibold text-sky-200 mt-1">Regular (1.0x) TFP</div>
-                        </div>
-                        <div class="text-center text-xs text-sky-300 font-medium z-10">
-                            or <span id="target-tfp-prem" class="text-white font-bold">0</span> Premium (1.5x) TFP
+                            <div class="text-xs font-semibold text-sky-200 mt-1">Total TFP (1.0x Equivalent)</div>
                         </div>
                     </section>
 
@@ -557,13 +566,14 @@
                 </form>
 
                 <div class="overflow-x-auto border rounded-lg border-slate-100">
-                    <table class="w-full text-left text-sm min-w-[950px]">
+                    <table class="w-full text-left text-sm min-w-[1050px]">
                         <thead class="bg-slate-50 text-slate-600">
                             <tr>
                                 <th class="p-3 font-semibold">Debt Name</th>
                                 <th class="p-3 font-semibold">Type</th>
                                 <th class="p-3 font-semibold text-center">Due Day</th>
                                 <th class="p-3 font-semibold text-center">Status</th>
+                                <th class="p-3 font-semibold text-right">Interest Rate</th>
                                 <th class="p-3 font-semibold text-right">Min Payment</th>
                                 <th class="p-3 font-semibold text-right">Current Balance</th>
                                 <th class="p-3 font-semibold text-center bg-sky-50 border-x border-sky-100 text-sky-900">TFP Work-Cost</th>
@@ -580,7 +590,7 @@
 
     <script>
         const monthsConfig = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        const STATE_VERSION = 23;
+        const STATE_VERSION = 25;
         const TFP_RATE_REG = 43.78;
         const TFP_RATE_15 = 65.67;
         const TFP_RATE_20 = 87.56;
@@ -592,7 +602,6 @@
             return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
-        // Helper to handle HH:MM or decimal inputs
         function parseTimeInput(val) {
             if (!val) return 0;
             if (typeof val === 'string' && val.includes(':')) {
@@ -666,11 +675,11 @@
 
             monthsConfig.forEach(m => {
                 if(!targetState.trips[m]) targetState.trips[m] = [];
-                
                 targetState.trips[m].forEach(t => {
                     if (t.baseTfp === undefined) t.baseTfp = t.tfp || 0;
                     if (t.boardingPay === undefined) t.boardingPay = 0;
                     if (t.sitPay === undefined) t.sitPay = 0;
+                    if (t.payMonth === undefined) t.payMonth = m; 
                 });
 
                 if(!targetState.expenses[m]) targetState.expenses[m] = [];
@@ -699,6 +708,7 @@
             DOM.sandboxTrueupDisplay = document.getElementById('sandbox-trueup-display');
             DOM.formSandboxTrip = document.getElementById('form-sandbox-trip');
             DOM.sandboxTripBoard = document.getElementById('sandbox-trip-board');
+            DOM.sandboxTripPaymonth = document.getElementById('sandbox-trip-paymonth');
             DOM.sandboxWarningBanner = document.getElementById('sandbox-warning-banner');
             DOM.sandboxWarningText = document.getElementById('sandbox-warning-text');
 
@@ -710,6 +720,7 @@
             DOM.targetTfpReg = document.getElementById('target-tfp-reg');
             DOM.targetTfpPrem = document.getElementById('target-tfp-prem');
 
+            DOM.summaryGrossVal = document.getElementById('summary-gross-val');
             DOM.summaryDeductionsVal = document.getElementById('summary-deductions-val');
             
             DOM.estBase = document.getElementById('est-base');
@@ -777,9 +788,19 @@
             let totalRegBase = 0, total15Base = 0, total20Base = 0;
             let totalSoftTfp = 0;
             let totalTafb = 0;
-            let activeTrips = state.trips[state.activeMonth] || [];
+            
+            const activeIdx = monthsConfig.indexOf(state.activeMonth);
+            const prevMonth = monthsConfig[(activeIdx - 1 + 12) % 12];
 
-            activeTrips.forEach(t => {
+            const currentMonthTrips = state.trips[state.activeMonth] || [];
+            const prevMonthTrips = state.trips[prevMonth] || [];
+
+            const applicableTrips = [
+                ...currentMonthTrips.filter(t => (t.payMonth || state.activeMonth) === state.activeMonth),
+                ...prevMonthTrips.filter(t => t.payMonth === state.activeMonth)
+            ];
+
+            applicableTrips.forEach(t => {
                 if (!t.isDropped) {
                     if (t.multiplier === 1) totalRegBase += (t.baseTfp || 0);
                     if (t.multiplier === 1.5) total15Base += (t.baseTfp || 0);
@@ -1048,6 +1069,15 @@
             }
             if (state.buckets.some(b => b.id == saveVal) || saveVal === 'none') DOM.saveBucketDropdown.value = saveVal;
 
+            if (DOM.sandboxTripPaymonth) {
+                const activeIdx = monthsConfig.indexOf(state.activeMonth);
+                const nextMonth = monthsConfig[(activeIdx + 1) % 12];
+                DOM.sandboxTripPaymonth.innerHTML = `
+                    <option value="${state.activeMonth}">Pays in ${state.activeMonth}</option>
+                    <option value="${nextMonth}">Pays in ${nextMonth} (Carryover)</option>
+                `;
+            }
+
             const incomeData = getCalculatedIncome();
             if (DOM.quickSplitBar) {
                 DOM.quickSplitBar.innerHTML = `<span class="font-bold text-slate-500 self-center">⚡ Quick 50% Fund:</span>` +
@@ -1137,7 +1167,7 @@
             const extraInflowTotal = currentMonthInflows.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
             const usableFlightIncome = incomeData.netFlightPay + extraInflowTotal;
 
-            // 1. Calculate Debt Liabilities & Minimum Payments FIRST
+            // 1. Calculate Debt Liabilities & Minimum Payments
             let sortedDebts = state.debts.map(d => {
                 let loggedExtraPayments = 0;
                 monthsConfig.forEach(m => {
@@ -1162,7 +1192,7 @@
             });
 
             const totalNetDebt = sortedDebts.reduce((sum, debt) => sum + debt.balance, 0);
-            if (DOM.textTotalDebt) DOM.textTotalDebt.textContent = `$${totalNetDebt.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            if (DOM.textTotalDebt) DOM.textTotalDebt.textContent = `$${totalNetDebt.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
 
             const activeDebts = sortedDebts.filter(d => d.balance > 0);
             const totalMinAll = activeDebts.reduce((s, d) => s + d.min, 0);
@@ -1201,9 +1231,11 @@
             const availableNetCash = usableFlightIncome - totalOutflowsAndReserved;
 
             if (DOM.textAvailableCash) DOM.textAvailableCash.textContent = `$${availableNetCash.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-            if (DOM.summaryIncomeVal) DOM.summaryIncomeVal.textContent = `$${usableFlightIncome.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
-            if (DOM.summaryOutflowVal) DOM.summaryOutflowVal.textContent = `$${totalOutflowsAndReserved.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
-            if (DOM.summaryPerDiemVal) DOM.summaryPerDiemVal.textContent = `$${incomeData.perDiemTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            
+            if (DOM.summaryGrossVal) DOM.summaryGrossVal.textContent = `$${incomeData.grossFlight.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            if (DOM.summaryIncomeVal) DOM.summaryIncomeVal.textContent = `$${usableFlightIncome.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            if (DOM.summaryOutflowVal) DOM.summaryOutflowVal.textContent = `-$${totalOutflowsAndReserved.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            if (DOM.summaryPerDiemVal) DOM.summaryPerDiemVal.textContent = `$${incomeData.perDiemTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
 
             if (DOM.summaryDeductionsVal) {
                 const deductions = incomeData.grossFlight * TAX_RATE;
@@ -1274,7 +1306,7 @@
 
                 for (let i = 0; i < sortedDebts.length; i++) {
                     let d = sortedDebts[i];
-                    if (d.balance > 0) {
+                    if (d.balance > 0 && extraRolloverCash > 0) {
                         let dynamicPayment = Math.min(extraRolloverCash, d.balance);
                         d.balance -= dynamicPayment;
                         extraRolloverCash -= dynamicPayment;
@@ -1491,7 +1523,11 @@
             const incomeData = getCalculatedIncome();
             const advance = parseFloat(state.advancePay) || 0;
             const trueUp = Math.max(0, incomeData.netFlightPay - advance);
-            const activeTrips = state.trips[state.activeMonth] || [];
+            
+            const prevMonth = monthsConfig[(activeMonthIdx - 1 + 12) % 12];
+            const currentTrips = state.trips[state.activeMonth] || [];
+            const carryoverTrips = (state.trips[prevMonth] || []).filter(t => t.payMonth === state.activeMonth);
+            const activeTrips = [...currentTrips, ...carryoverTrips];
 
             for(let day = 1; day <= daysInMonth; day++) {
                 let dayEventsHtml = '';
@@ -1503,7 +1539,7 @@
                     dayEventsHtml += `<div class="bg-emerald-100 text-emerald-800 text-[10px] font-bold p-1 rounded truncate">+$${trueUp.toFixed(0)} True-Up</div>`;
                 }
 
-                activeTrips.forEach(t => {
+                currentTrips.forEach(t => {
                     if(!t.isDropped && parseInt(t.day, 10) === day) {
                         const adj = t.adjustments ? ` (+${t.adjustments})` : '';
                         const totalTfp = (t.baseTfp || 0) + (t.boardingPay || 0) + (t.sitPay || 0) + (t.adjustments || 0);
@@ -1742,9 +1778,17 @@
 
         function renderSandbox() {
             if (!DOM.sandboxTripBoard) return;
-            const activeTrips = state.trips[state.activeMonth] || [];
+            
+            const activeIdx = monthsConfig.indexOf(state.activeMonth);
+            const prevMonth = monthsConfig[(activeIdx - 1 + 12) % 12];
+            const nextMonth = monthsConfig[(activeIdx + 1) % 12];
 
-            DOM.sandboxTripBoard.innerHTML = activeTrips.map(trip => {
+            const currentTrips = state.trips[state.activeMonth] || [];
+            const carryoverTrips = (state.trips[prevMonth] || []).filter(t => t.payMonth === state.activeMonth);
+            
+            let html = '';
+
+            const renderTripCard = (trip, originMonth, isCarryoverIn) => {
                 let rate = TFP_RATE_REG;
                 let multLabel = "1.0x (Reg)";
                 let multClass = "bg-slate-100 text-slate-600 border-slate-200";
@@ -1759,55 +1803,72 @@
                 const grossBase = baseTfp * rate;
                 const grossSoft = softTfp * TFP_RATE_REG;
                 const net = (grossBase + grossSoft) * (1 - TAX_RATE);
-                
                 const perDiem = (trip.tafb || 0) * PER_DIEM_RATE;
-                const opacity = trip.isDropped ? 'opacity-50 grayscale' : 'opacity-100';
+
+                const isCarryoverOut = (!isCarryoverIn && trip.payMonth && trip.payMonth !== state.activeMonth);
+                
+                let badgeHtml = '';
+                if (isCarryoverIn) {
+                    badgeHtml = `<div class="absolute -top-2.5 left-4 bg-amber-400 text-amber-900 text-[10px] font-black px-2 py-0.5 rounded shadow-sm border border-amber-500 z-10">FLOWN IN ${originMonth.toUpperCase()} (PAYS NOW)</div>`;
+                } else if (isCarryoverOut) {
+                    badgeHtml = `<div class="absolute -top-2.5 left-4 bg-purple-500 text-white text-[10px] font-black px-2 py-0.5 rounded shadow-sm border border-purple-600 z-10">PAYS IN ${trip.payMonth.toUpperCase()}</div>`;
+                }
+
+                const opacity = trip.isDropped ? 'opacity-40 grayscale' : 'opacity-100';
+                const payDisplayClass = isCarryoverOut ? 'opacity-30' : 'opacity-100';
 
                 return `
-                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative ${opacity} transition-all">
-                        <button onclick="deleteSandboxTrip(${trip.id})" class="absolute top-2 right-2 text-slate-300 hover:text-red-500 font-bold">&times;</button>
-                        <div class="flex justify-between items-center mb-3 pr-4 border-b border-slate-100 pb-2">
-                            <h4 class="font-bold text-slate-800 truncate mr-2">${escapeHtml(trip.name)}</h4>
-                            <span class="text-xs font-semibold text-slate-400 shrink-0">Day ${trip.day}</span>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative ${opacity} transition-all mt-2 group">
+                        ${badgeHtml}
+                        <button onclick="deleteSandboxTrip(${trip.id}, '${originMonth}')" class="absolute top-2 right-2 text-slate-300 hover:text-red-500 font-bold text-lg leading-none">&times;</button>
+                        
+                        <div class="flex justify-between items-center mb-3 pr-4 border-b border-slate-100 pb-2 pt-1">
+                            <h4 class="font-bold text-slate-800 truncate mr-2 text-[13px] uppercase">${escapeHtml(trip.name)}</h4>
+                            <span class="text-[11px] font-semibold text-slate-400 shrink-0">Day ${trip.day}</span>
                         </div>
                         
-                        <div class="flex justify-between items-center mb-4">
+                        <div class="flex justify-between items-center mb-4 ${payDisplayClass}">
                             <div>
-                                <div class="text-[11px] font-bold px-1.5 py-0.5 rounded ${multClass} border inline-block mb-1">${multLabel} Base: ${baseTfp.toFixed(1)}</div>
-                                <div class="text-[10px] text-slate-500 font-semibold">+ ${softTfp.toFixed(1)} Soft TFP (1.0x)</div>
-                                <div class="text-sm font-black text-slate-900 mt-1">${totalTfp.toFixed(1)} Total TFP</div>
+                                <div class="text-[10px] font-bold px-1.5 py-0.5 rounded ${multClass} border inline-block mb-1">${multLabel} Base: ${baseTfp.toFixed(1)}</div>
+                                <div class="text-[10px] text-slate-400 font-semibold">+ ${softTfp.toFixed(1)} Soft TFP (1.0x)</div>
+                                <div class="text-sm font-black text-slate-900 mt-0.5">${totalTfp.toFixed(1)} Total TFP</div>
                             </div>
                             <div class="text-right">
-                                <div class="text-sm font-black text-emerald-600">+$${net.toFixed(2)} <span class="text-[10px] text-slate-400 font-normal">Net</span></div>
+                                <div class="text-sm font-black text-emerald-600">+$${net.toFixed(2)} <span class="text-[9px] text-slate-400 font-normal">Net</span></div>
                                 <div class="text-[10px] font-bold text-amber-500 mt-0.5">+$${perDiem.toFixed(2)} Per Diem</div>
                             </div>
                         </div>
 
                         <div class="flex gap-2">
-                            <button onclick="toggleDropTrip(${trip.id}, ${!trip.isDropped})" class="flex-1 ${trip.isDropped ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'} text-xs font-bold py-1.5 rounded transition">
+                            <button onclick="toggleDropTrip(${trip.id}, ${!trip.isDropped}, '${originMonth}')" class="flex-1 ${trip.isDropped ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'} text-[11px] font-bold py-1.5 rounded transition">
                                 ${trip.isDropped ? 'Restore Trip' : 'Drop Trip'}
                             </button>
-                            <button onclick="addTripAdjustment(${trip.id})" class="flex-1 bg-slate-50 border border-slate-200 text-sky-600 hover:bg-slate-100 text-xs font-bold py-1.5 rounded transition">+ Adj. Soft Pay</button>
+                            <button onclick="addTripAdjustment(${trip.id}, '${originMonth}')" class="flex-1 bg-slate-50 border border-slate-200 text-sky-600 hover:bg-slate-100 text-[11px] font-bold py-1.5 rounded transition shadow-sm">+ Adj. Soft Pay</button>
                         </div>
                     </div>
                 `;
-            }).join('');
+            };
+
+            carryoverTrips.forEach(t => html += renderTripCard(t, prevMonth, true));
+            currentTrips.forEach(t => html += renderTripCard(t, state.activeMonth, false));
+
+            DOM.sandboxTripBoard.innerHTML = html;
         }
 
-        window.toggleDropTrip = function(id, dropStatus) {
-            const trip = state.trips[state.activeMonth].find(t => t.id === id);
+        window.toggleDropTrip = function(id, dropStatus, originMonth) {
+            const trip = state.trips[originMonth].find(t => t.id === id);
             if(trip) trip.isDropped = dropStatus;
             saveState();
         };
 
-        window.deleteSandboxTrip = function(id) {
+        window.deleteSandboxTrip = function(id, originMonth) {
             if(!confirm("Remove this trip from your schedule?")) return;
-            state.trips[state.activeMonth] = state.trips[state.activeMonth].filter(t => t.id !== id);
+            state.trips[originMonth] = state.trips[originMonth].filter(t => t.id !== id);
             saveState();
         };
 
-        window.addTripAdjustment = function(id) {
-            const trip = state.trips[state.activeMonth].find(t => t.id === id);
+        window.addTripAdjustment = function(id, originMonth) {
+            const trip = state.trips[originMonth].find(t => t.id === id);
             if(!trip) return;
             const extra = prompt(`Add extra Soft TFP for block delays/strands on ${trip.name}:\n(Enter a negative number to subtract)`, "0");
             if(extra !== null && !isNaN(parseFloat(extra))) {
@@ -2555,6 +2616,10 @@
             if (DOM.formSandboxTrip) {
                 DOM.formSandboxTrip.addEventListener('submit', (e) => {
                     e.preventDefault();
+                    
+                    const payMonthSelect = document.getElementById('sandbox-trip-paymonth');
+                    const targetPayMonth = payMonthSelect ? payMonthSelect.value : state.activeMonth;
+
                     state.trips[state.activeMonth].push({
                         id: Date.now(),
                         name: document.getElementById('sandbox-trip-name').value,
@@ -2564,6 +2629,7 @@
                         sitPay: parseFloat(document.getElementById('sandbox-trip-sit').value) || 0,
                         multiplier: parseFloat(document.getElementById('sandbox-trip-mult').value) || 1,
                         tafb: parseTimeInput(document.getElementById('sandbox-trip-tafb').value),
+                        payMonth: targetPayMonth,
                         isDropped: false,
                         adjustments: 0
                     });
